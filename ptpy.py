@@ -1,8 +1,8 @@
 '''This module implements Picture Transfer Protocol'''
-from construct import ( # noqa
+from construct import (  # noqa
     LengthValueAdapter, Field, Container, ConstAdapter, ULInt8, Struct, Enum,
     LFloat32, UBInt16, UBInt32, Array, Flag, CString, Sequence, Embedded,
-    BitStruct, BitField, Padding, FieldError, NoneOf
+    BitStruct, BitField, Padding, FieldError, NoneOf, Byte
 )
 
 
@@ -13,6 +13,7 @@ class PTPError(Exception):
 # Apparently nobody uses the SessionID field.
 SessionID = NoneOf(UBInt32('SessionID'), [0])
 TransactionID = UBInt32('TransactionID')
+Parameter = BitField('Parameter', 32)
 OperationCode = Enum(UBInt16('OperationCode'),
                      Undefined=0x1000,
                      GetDeviceInfo=0x1001,
@@ -53,7 +54,6 @@ OperationCode = Enum(UBInt16('OperationCode'),
                      GetStreamInfo=0x1024,
                      GetStream=0x1025,
                      )
-
 ResponseCode = Enum(UBInt16('ResponseCode'),
                     Undefined=0x2000,
                     OK=0x2001,
@@ -92,3 +92,38 @@ ResponseCode = Enum(UBInt16('ResponseCode'),
                     NoStreamEnabled=0x2022,
                     InvalidDataset=0x2023,
                     )
+EventCode = Enum(UBInt16('EventCode'),
+                 Undefined=0x4000,
+                 CancelTransaction=0x4001,
+                 ObjectAdded=0x4002,
+                 ObjectRemoved=0x4003,
+                 StoreAdded=0x4004,
+                 StoreRemoved=0x4005,
+                 DevicePropChanged=0x4006,
+                 ObjectInfoChanged=0x4007,
+                 DeviceInfoChanged=0x4008,
+                 RequestObjectTransfer=0x4009,
+                 StoreFull=0x400A,
+                 DeviceReset=0x400B,
+                 StorageInfoChanged=0x400C,
+                 CaptureComplete=0x400D,
+                 UnreportedStatus=0x400E,
+                 )
+Event = Struct('Event',
+               EventCode,
+               SessionID,
+               TransactionID,
+               Array(3, Parameter),
+               )
+Response = Struct('Response',
+                  ResponseCode,
+                  SessionID,
+                  TransactionID,
+                  Array(5, Parameter),
+                  )
+Operation = Struct('Operation',
+                   OperationCode,
+                   SessionID,
+                   TransactionID,
+                   Array(5, Parameter),
+                   )

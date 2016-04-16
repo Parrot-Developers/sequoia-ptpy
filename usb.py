@@ -1,7 +1,8 @@
 '''This module implements the USB transport layer for PTP'''
 import usb.core
 import usb.util
-import ptp.py
+import ptp
+
 
 class find_class(object):
     def __init__(self, class_):

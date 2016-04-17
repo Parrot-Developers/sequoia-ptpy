@@ -15,6 +15,14 @@ from construct import (
         ULInt32, UBInt16, UBInt32
         )
 
+__all__ = (
+        'PTPError', 'PTPUnimplemented', 'SessionID', 'TransactionID',
+        'OperationCode', 'ResponseCode', 'EventCode', 'Event', 'Response',
+        'Operation', 'PTPDevice',
+        )
+
+__author__ = ('Luis Mario Domenzain',)
+
 
 # Exceptions
 class PTPError(Exception):

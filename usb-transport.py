@@ -165,13 +165,17 @@ class PTPUSB(PTPDevice):
                     return True
         return False
 
-    def send(self, ptp_container, payload):
-        pass
+    def send(self, ptp_container, data):
+        '''Transfer operation with dataphase from initiator to responder'''
+
+    def __recv_data():
+        '''Helper method for getting data'''
 
     def recv(self, ptp_container):
-        pass
+        '''Transfer operation with dataphase from responder to initiator.'''
 
     def mesg(self, ptp_container):
+        '''Transfer operation without dataphase.'''
         operation = self.__Operation.build(ptp_container)
         ptp_container['Type'] = 'Command'
         ptp_container['Payload'] = operation
@@ -186,7 +190,10 @@ class PTPUSB(PTPDevice):
         return self.__PartialResponse.parse(payload)
 
     def event(self, wait=False):
-        response = None
+        '''Check event.
+
+        If `wait` this function is blocking. Otherwise it may return None.
+        '''
         try:
             response = self.__intep.read(
                     self.__FullEvent.sizeof() +

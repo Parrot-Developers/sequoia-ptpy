@@ -94,6 +94,7 @@ def OperationCode(le=False, be=False):
         GetFilesystemManifest=0x1023,
         GetStreamInfo=0x1024,
         GetStream=0x1025,
+        _default_='UnknownOperation',
         )
 
 
@@ -138,6 +139,7 @@ def ResponseCode(le=False, be=False):
         InvalidEnumHandle=0x2021,
         NoStreamEnabled=0x2022,
         InvalidDataset=0x2023,
+        _default_='UnknownResponse',
         )
 
 
@@ -161,6 +163,7 @@ def EventCode(le=False, be=False):
         StorageInfoChanged=0x400C,
         CaptureComplete=0x400D,
         UnreportedStatus=0x400E,
+        _default_='UnknownEvent',
         )
 Event = Struct(
         'Event',

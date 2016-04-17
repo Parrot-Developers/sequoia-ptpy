@@ -11,7 +11,7 @@ from ptp import (  # noqa
 
 from construct import (  # noqa
         Container, Array, ULInt32, ULInt16, ULInt8, Struct, Bytes,
-        ExprAdapter
+        ExprAdapter, Embedded
         )
 
 
@@ -40,6 +40,11 @@ class PTPUSB(PTPDevice):
     # Redefine constructors for USB.
     __Length = ULInt32('Length')
     __Type = ULInt16('Type')
+    __Header = Struct(
+            'Header',
+            __Length,
+            __Type,
+            )
     __Operation = Struct(
             'Operation',
             OperationCode(le=True),
@@ -63,8 +68,7 @@ class PTPUSB(PTPDevice):
     __Transaction = ExprAdapter(
             Struct(
                 'Transaction',
-                __Length,
-                __Type,
+                Embedded(__Header),
                 Bytes('Payload', lambda ctx: ctx.__Length),
                 ),
             encoder=lambda obj, ctx: Container(Length=len(obj), **obj),
@@ -143,14 +147,22 @@ class PTPUSB(PTPDevice):
 
     def mesg(self, ptp_container):
         self.__outep.write(self.__Operation.build(ptp_container))
-        response = self.__inep.read(self.__Response.sizeof())
+        response = self.__inep.read(
+                self.__Response.sizeof() +
+                self.__Header.sizeof()
+                )
+        try:
+            print self.__Response.parse(response)
+        except Exception:
+            pass
         return response
 
     def event(self, wait=False):
         response = None
         try:
             response = self.__intep.read(
-                    self.__Event.sizeof(),
+                    self.__Event.sizeof() +
+                    self.__Header.sizeof(),
                     timeout=0 if wait else 1
                     )
         except usb.core.USBError as e:
@@ -158,6 +170,10 @@ class PTPUSB(PTPDevice):
             if e.errno == 110:
                 pass
 
+        try:
+            print self.__Response.parse(response)
+        except Exception:
+            pass
         return response
 
 if __name__ == "__main__":

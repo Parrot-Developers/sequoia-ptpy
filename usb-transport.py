@@ -205,5 +205,6 @@ class PTPUSB(PTPDevice):
 if __name__ == "__main__":
     camera = PTPUSB()
     print camera.open_session()
+    for i in range(10):
+        print camera.event(wait=True)
     print camera.close_session()
-    print camera.event()

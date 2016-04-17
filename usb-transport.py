@@ -46,7 +46,14 @@ class PTPUSB(PTPDevice):
     '''Implement bare PTP Device with USB transport.'''
     # Redefine constructors for USB.
     __Length = ULInt32('Length')
-    __Type = ULInt16('Type')
+    __Type = Enum(
+            ULInt16('Type'),
+            Undefined=0x0000,
+            Command=0x0001,
+            Data=0x0002,
+            Response=0x0003,
+            Event=0x0004,
+            )
     __Header = Struct(
             'Header',
             __Length,
@@ -58,30 +65,42 @@ class PTPUSB(PTPDevice):
             TransactionID(le=True),
             Array(5, Parameter),
             )
-    __Response = Struct(
+    __FullResponse = Struct(
             'Response',
             ResponseCode(le=True),
             TransactionID(le=True),
             Array(5, Parameter),
             )
-    __Event = Struct(
+    __PartialResponse = Struct(
+            'Response',
+            ResponseCode(le=True),
+            TransactionID(le=True),
+            Range(0, 5, Parameter),
+            )
+    __FullEvent = Struct(
             'Event',
-            __Length,
-            __Type,
-            OperationCode(le=True),
+            EventCode(le=True),
             TransactionID(le=True),
             Array(3, Parameter)
             )
+    __PartialEvent = Struct(
+            'Event',
+            EventCode(le=True),
+            TransactionID(le=True),
+            Range(0, 3, Parameter)
+            )
+    __TransactionBase = Struct(
+            'Transaction',
+            Embedded(__Header),
+            Bytes('Payload', lambda ctx, h=__Header: ctx.Length - h.sizeof()),
+            )
     __Transaction = ExprAdapter(
-            Struct(
-                'Transaction',
-                Embedded(__Header),
-                Bytes('Payload', lambda ctx: ctx.__Length),
+            __TransactionBase,
+            encoder=lambda obj, ctx, h=__Header: Container(
+                Length=len(obj.Payload) + h.sizeof(),
+                **obj
                 ),
-            encoder=lambda obj, ctx: Container(Length=len(obj), **obj),
-            decoder=lambda obj, ctx: Container(
-                **{obj[field] for field in obj if field != 'Length'}
-                ),
+            decoder=lambda obj, ctx: obj,
             )
 
     def __init__(self, dev=None):

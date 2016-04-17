@@ -42,19 +42,22 @@ class PTPUSB(PTPDevice):
     __Type = ULInt16('Type')
     __Operation = Struct(
             'Operation',
-            OperationCode,
-            TransactionID,
+            OperationCode(le=True),
+            TransactionID(le=True),
             Array(5, Parameter),
             )
     __Response = Struct(
             'Response',
-            ResponseCode,
-            TransactionID,
-            Array(5, Parameter))
+            ResponseCode(le=True),
+            TransactionID(le=True),
+            Array(5, Parameter),
+            )
     __Event = Struct(
             'Event',
-            OperationCode,
-            TransactionID,
+            __Length,
+            __Type,
+            OperationCode(le=True),
+            TransactionID(le=True),
             Array(3, Parameter)
             )
     __Transaction = ExprAdapter(

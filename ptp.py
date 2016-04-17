@@ -25,13 +25,37 @@ class PTPUnimplemented(PTPError):
     pass
 
 
+def switch_endian(le, be, l, b, n):
+    '''Return little, native or big endian.'''
+    if (be != le):
+        return l if le else b
+    elif le:
+        raise PTPError('Cannot be both little and big endian...')
+    else:
+        return n
+
+
 # Apparently nobody uses the SessionID field. Even though it is specified in
 # ISO15740:2013(E), no device respects it and the session number is implicit.
-SessionID = UNInt32('SessionID')
-TransactionID = UNInt32('TransactionID')
+def SessionID(le=False, be=False):
+    '''Return desired endianness for SessionID'''
+    subcon = switch_endian(le, be, ULInt32, UBInt32, UNInt32)
+    return subcon('SessionID')
+
+
+def TransactionID(le=False, be=False):
+    '''Return desired endianness for TransactionID'''
+    subcon = switch_endian(le, be, ULInt32, UBInt32, UNInt32)
+    return subcon('TransactionID')
+
 Parameter = BitField('Parameter', 32)
-OperationCode = Enum(
-        UNInt16('OperationCode'),
+
+
+def OperationCode(le=False, be=False):
+    '''Return desired endianness for known OperationCode'''
+    subcon = switch_endian(le, be, ULInt16, UBInt16, UNInt16)
+    return Enum(
+        subcon('OperationCode'),
         Undefined=0x1000,
         GetDeviceInfo=0x1001,
         OpenSession=0x1002,
@@ -71,8 +95,13 @@ OperationCode = Enum(
         GetStreamInfo=0x1024,
         GetStream=0x1025,
         )
-ResponseCode = Enum(
-        UNInt16('ResponseCode'),
+
+
+def ResponseCode(le=False, be=False):
+    '''Return desired endianness for known ResponseCode'''
+    subcon = switch_endian(le, be, ULInt16, UBInt16, UNInt16)
+    return Enum(
+        subcon('ResponseCode'),
         Undefined=0x2000,
         OK=0x2001,
         GeneralError=0x2002,
@@ -110,8 +139,13 @@ ResponseCode = Enum(
         NoStreamEnabled=0x2022,
         InvalidDataset=0x2023,
         )
-EventCode = Enum(
-        UNInt16('EventCode'),
+
+
+def EventCode(le=False, be=False):
+    '''Return desired endianness for known EventCode'''
+    subcon = switch_endian(le, be, ULInt16, UBInt16, UNInt16)
+    return Enum(
+        subcon('EventCode'),
         Undefined=0x4000,
         CancelTransaction=0x4001,
         ObjectAdded=0x4002,
@@ -130,23 +164,23 @@ EventCode = Enum(
         )
 Event = Struct(
         'Event',
-        EventCode,
-        SessionID,
-        TransactionID,
+        EventCode(),
+        SessionID(),
+        TransactionID(),
         Array(3, Parameter),
         )
 Response = Struct(
         'Response',
-        ResponseCode,
-        SessionID,
-        TransactionID,
+        ResponseCode(),
+        SessionID(),
+        TransactionID(),
         Array(5, Parameter),
         )
 Operation = Struct(
         'Operation',
-        OperationCode,
-        SessionID,
-        TransactionID,
+        OperationCode(),
+        SessionID(),
+        TransactionID(),
         Array(5, Parameter),
         )
 

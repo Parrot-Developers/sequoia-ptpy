@@ -172,22 +172,24 @@ class PTPUSB(PTPDevice):
         pass
 
     def mesg(self, ptp_container):
-        self.__outep.write(self.__Operation.build(ptp_container))
+        operation = self.__Operation.build(ptp_container)
+        ptp_container['Type'] = 'Command'
+        ptp_container['Payload'] = operation
+        transaction = self.__Transaction.build(ptp_container)
+        self.__outep.write(transaction)
         response = self.__inep.read(
-                self.__Response.sizeof() +
+                self.__FullResponse.sizeof() +
                 self.__Header.sizeof()
                 )
-        try:
-            print self.__Response.parse(response)
-        except Exception:
-            pass
-        return response
+        transaction = self.__Transaction.parse(response)
+        payload = transaction.Payload
+        return self.__PartialResponse.parse(payload)
 
     def event(self, wait=False):
         response = None
         try:
             response = self.__intep.read(
-                    self.__Event.sizeof() +
+                    self.__FullEvent.sizeof() +
                     self.__Header.sizeof(),
                     timeout=0 if wait else 1
                     )
@@ -195,12 +197,10 @@ class PTPUSB(PTPDevice):
             # Ignore timeout.
             if e.errno == 110:
                 pass
+        transaction = self.__Transaction.parse(response)
+        payload = transaction.Payload
 
-        try:
-            print self.__Response.parse(response)
-        except Exception:
-            pass
-        return response
+        return self.__PartialEvent.parse(payload)
 
 if __name__ == "__main__":
     camera = PTPUSB()

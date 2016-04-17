@@ -1,19 +1,26 @@
-'''This module implements the USB transport layer for PTP'''
+'''This module implements the USB transport layer for PTP.
+
+It exports the PTPUSB class. Both the transport layer and the basic PTP
+impelementation are Vendor agnostic. Vendor extensions should extend these to
+support more operations.
+'''
 import usb.core
 from usb.util import (
         endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK,
         ENDPOINT_TYPE_INTR, ENDPOINT_OUT, ENDPOINT_IN
         )
-from ptp import (  # noqa
+from ptp import (
         PTPDevice, PTPError, ResponseCode, EventCode, OperationCode,
         TransactionID, Parameter
         )
 
-from construct import (  # noqa
-        Container, Array, ULInt32, ULInt16, ULInt8, Struct, Bytes,
-        ExprAdapter, Embedded
+from construct import (
+        Container, Array, ULInt32, ULInt16, Struct, Bytes, ExprAdapter,
+        Embedded, Enum, Range
         )
 
+__all__ = ('PTPUSB',)
+__author__ = ('Luis Mario Domenzain',)
 
 PTP_USB_CLASS = 6
 

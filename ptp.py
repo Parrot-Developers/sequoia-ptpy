@@ -1,16 +1,18 @@
-'''This module implements Picture Transfer Protocol.
+'''This module implements Picture Transfer Protocol (ISO 15740:2013(E))
 
-It is transport agnostic and requires a transport layer to provide the methods
-in the class :py:class`PTPDevice`.
+It is transport agnostic and requires a transport layer to provide the missing
+methods in the class :py:class`PTPDevice`.
 
 Convenience structures are provided to pack messages. These are native-endian
-and may need to be adapted to transport-endianness.
+and may need to be adapted to transport-endianness:
+
+    SessionID()  # returns native endian constructor
+    SessionID(le=True)  # returns little endian constructor
+    SessionID(be=True)  # returns big endian constructor
 '''
-from construct import (  # noqa
-        LengthValueAdapter, Field, Container, ConstAdapter, Struct, Enum,
-        UNInt16, UNInt32, Array, Flag, CString, Sequence, Embedded, BitStruct,
-        BitField, Padding, FieldError, NoneOf, Byte, ULInt16, ULInt32, UBInt16,
-        UBInt32
+from construct import (
+        Container, Struct, Enum, UNInt16, UNInt32, Array, BitField, ULInt16,
+        ULInt32, UBInt16, UBInt32
         )
 
 

@@ -16,10 +16,12 @@ from construct import (  # noqa
 
 # Exceptions
 class PTPError(Exception):
+    '''PTP implementation exceptions.'''
     pass
 
 
 class PTPUnimplemented(PTPError):
+    '''Exception to indicate missing implementation.'''
     pass
 
 
@@ -168,45 +170,45 @@ class PTPDevice(object):
     def send(self, ptp_container, payload):
         '''Operation with dataphase from initiator to responder'''
         raise PTPUnimplemented(
-            'Please implement a PTP dataphase send for this transport.'
-            )
+                'Please implement a PTP dataphase send for this transport.'
+                )
 
     def recv(self, ptp_container):
         '''Operation with dataphase from responder to initiator'''
         raise PTPUnimplemented(
-            'Please implement PTP dataphase receive for this transport.'
-            )
+                'Please implement PTP dataphase receive for this transport.'
+                )
 
     def mesg(self, ptp_container):
         '''Operation with no dataphase'''
         raise PTPUnimplemented(
-            'Please implement PTP no-dataphase command for this transport.'
-            )
+                'Please implement PTP no-dataphase command for this transport.'
+                )
 
     def event(self, wait=False):
         raise PTPUnimplemented(
-                'Please implement a PTP event for this transport.'
-                )
+            'Please implement a PTP event for this transport.'
+            )
 
     def open_session(self):
         self.__session += 1
         ptp = Container(
-                OperationCode='OpenSession',
-                # Only the OpenSession operation is allowed to have a 0
-                # SessionID, because no session is open yet.
-                SessionID=0,
-                TransactionID=0,
-                Parameter=[self.__session, 0, 0, 0, 0]
-                )
+            OperationCode='OpenSession',
+            # Only the OpenSession operation is allowed to have a 0
+            # SessionID, because no session is open yet.
+            SessionID=0,
+            TransactionID=0,
+            Parameter=[self.__session, 0, 0, 0, 0]
+            )
         response = self.mesg(ptp)
         return response
 
     def close_session(self):
         ptp = Container(
-                OperationCode='CloseSession',
-                SessionID=self.__session,
-                TransactionID=0,
-                Parameter=[0, 0, 0, 0, 0]
-                )
+            OperationCode='CloseSession',
+            SessionID=self.__session,
+            TransactionID=0,
+            Parameter=[0, 0, 0, 0, 0]
+            )
         response = self.mesg(ptp)
         return response

@@ -203,7 +203,7 @@ class PTPUSB(PTPDevice):
         except usb.core.USBError as e:
             # Ignore timeout.
             if e.errno == 110:
-                pass
+                return None
         transaction = self.__Transaction.parse(response)
         payload = transaction.Payload
 

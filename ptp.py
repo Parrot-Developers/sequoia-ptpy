@@ -483,3 +483,16 @@ class PTPDevice(object):
         )
         response = self.mesg(ptp)
         return response
+
+    def get_device_info(self):
+        ptp = Container(
+            OperationCode='GetDeviceInfo',
+            SessionID=self.__session,
+            # GetrDeviceInfo can happen outside a session. But if there is one
+            # running just use that one.
+            TransactionID=(self.__transaction if (self.__session != 0) else 0),
+            Parameter=[0, 0, 0, 0, 0]
+        )
+        response = self.recv(ptp)
+        # TODO: debug.
+        return Debugger(self._DeviceInfo).parse(response.Data)

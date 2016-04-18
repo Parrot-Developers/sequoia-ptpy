@@ -48,23 +48,33 @@ def switch_endian(le, be, l, b, n):
 
 # Apparently nobody uses the SessionID field. Even though it is specified in
 # ISO15740:2013(E), no device respects it and the session number is implicit.
-def SessionID(le=False, be=False):
+def SessionID(_le_=False, _be_=False):
     '''Return desired endianness for SessionID'''
-    subcon = switch_endian(le, be, ULInt32, UBInt32, UNInt32)
+    subcon = switch_endian(_le_, _be_, ULInt32, UBInt32, UNInt32)
     return subcon('SessionID')
 
 
-def TransactionID(le=False, be=False):
+def TransactionID(_le_=False, _be_=False):
     '''Return desired endianness for TransactionID'''
-    subcon = switch_endian(le, be, ULInt32, UBInt32, UNInt32)
+    subcon = switch_endian(_le_, _be_, ULInt32, UBInt32, UNInt32)
     return subcon('TransactionID')
 
 Parameter = BitField('Parameter', 32)
 
 
-def OperationCode(le=False, be=False, **vendor_codes):
+def PropertyCode(_le_=False, _be_=False, **vendor_properties):
     '''Return desired endianness for known OperationCode'''
-    subcon = switch_endian(le, be, ULInt16, UBInt16, UNInt16)
+    subcon = switch_endian(_le_, _be_, ULInt16, UBInt16, UNInt16)
+    return Enum(
+        subcon('PropertyCode'),
+        _default_=Pass,
+        **vendor_properties
+        )
+
+
+def OperationCode(_le_=False, _be_=False, **vendor_operations):
+    '''Return desired endianness for known OperationCode'''
+    subcon = switch_endian(_le_, _be_, ULInt16, UBInt16, UNInt16)
     return Enum(
         subcon('OperationCode'),
         _default_=Pass,
@@ -203,7 +213,7 @@ Operation = Struct(
 
 
 class PTPDevice(object):
-    '''Implement bare PTP Device. Vendor specifics should extend it.'''
+    '''Implement bare PTP Device. Vendor specific devices should extend it.'''
     # These constructors are provided as a tentative interface. Each transport
     # layer may use them as they are or modify them. For instance, over most
     # USB cameras session is implicit and should be left out.

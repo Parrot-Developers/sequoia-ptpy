@@ -12,7 +12,7 @@ and may need to be adapted to transport-endianness:
 '''
 from construct import (
         Container, Struct, Enum, UNInt16, UNInt32, Array, BitField, ULInt16,
-        ULInt32, UBInt16, UBInt32
+        ULInt32, UBInt16, UBInt32, Pass
         )
 from contextlib import contextmanager
 
@@ -105,7 +105,7 @@ def OperationCode(le=False, be=False):
         GetFilesystemManifest=0x1023,
         GetStreamInfo=0x1024,
         GetStream=0x1025,
-        _default_='UnknownOperation',
+        _default_=Pass,
         )
 
 
@@ -150,7 +150,7 @@ def ResponseCode(le=False, be=False):
         InvalidEnumHandle=0x2021,
         NoStreamEnabled=0x2022,
         InvalidDataset=0x2023,
-        _default_='UnknownResponse',
+        _default_=Pass,
         )
 
 
@@ -174,7 +174,7 @@ def EventCode(le=False, be=False):
         StorageInfoChanged=0x400C,
         CaptureComplete=0x400D,
         UnreportedStatus=0x400E,
-        _default_='UnknownEvent',
+        _default_=Pass,
         )
 Event = Struct(
         'Event',
@@ -267,7 +267,6 @@ class PTPDevice(object):
     def session_id(self, value):
         '''Ignore external modifications to SessionID'''
         pass
-
 
     @contextmanager
     def session(self):

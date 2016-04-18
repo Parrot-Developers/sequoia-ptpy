@@ -62,11 +62,12 @@ def TransactionID(le=False, be=False):
 Parameter = BitField('Parameter', 32)
 
 
-def OperationCode(le=False, be=False):
+def OperationCode(le=False, be=False, **vendor_codes):
     '''Return desired endianness for known OperationCode'''
     subcon = switch_endian(le, be, ULInt16, UBInt16, UNInt16)
     return Enum(
         subcon('OperationCode'),
+        _default_=Pass,
         Undefined=0x1000,
         GetDeviceInfo=0x1001,
         OpenSession=0x1002,
@@ -105,15 +106,16 @@ def OperationCode(le=False, be=False):
         GetFilesystemManifest=0x1023,
         GetStreamInfo=0x1024,
         GetStream=0x1025,
-        _default_=Pass,
+        **vendor_codes
         )
 
 
-def ResponseCode(le=False, be=False):
+def ResponseCode(le=False, be=False, **vendor_responses):
     '''Return desired endianness for known ResponseCode'''
     subcon = switch_endian(le, be, ULInt16, UBInt16, UNInt16)
     return Enum(
         subcon('ResponseCode'),
+        _default_=Pass,
         Undefined=0x2000,
         OK=0x2001,
         GeneralError=0x2002,
@@ -150,15 +152,16 @@ def ResponseCode(le=False, be=False):
         InvalidEnumHandle=0x2021,
         NoStreamEnabled=0x2022,
         InvalidDataset=0x2023,
-        _default_=Pass,
+        **vendor_responses
         )
 
 
-def EventCode(le=False, be=False):
+def EventCode(le=False, be=False, **vendor_events):
     '''Return desired endianness for known EventCode'''
     subcon = switch_endian(le, be, ULInt16, UBInt16, UNInt16)
     return Enum(
         subcon('EventCode'),
+        _default_=Pass,
         Undefined=0x4000,
         CancelTransaction=0x4001,
         ObjectAdded=0x4002,
@@ -174,7 +177,7 @@ def EventCode(le=False, be=False):
         StorageInfoChanged=0x400C,
         CaptureComplete=0x400D,
         UnreportedStatus=0x400E,
-        _default_=Pass,
+        **vendor_events
         )
 Event = Struct(
         'Event',

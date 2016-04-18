@@ -8,6 +8,7 @@ extension:
     from vendors.parrot import *
     # Here PTPDevice has a vendor extension
     from transport.usb import *
+    # Here PTPDevice can now be instantiated over transport
 '''
 import ptp
 

@@ -11,21 +11,24 @@ and may need to be adapted to transport-endianness:
     SessionID(be=True)  # returns big endian constructor
 '''
 from construct import (
-        Container, Struct, Enum, UNInt16, UNInt32, Array, BitField, ULInt16,
-        ULInt32, UBInt16, UBInt32, Pass
-        )
+    Container, Struct, Enum, UNInt8, UNInt16, UNInt32, Array, BitField, ULInt8,
+    ULInt16, ULInt32, UBInt8, UBInt16, UBInt32, Pass, PascalString, Debugger
+    )
 from contextlib import contextmanager
 
+# Module specific
+# _______________
 __all__ = (
-        'PTPError', 'PTPUnimplemented', 'SessionID', 'TransactionID',
-        'OperationCode', 'ResponseCode', 'EventCode', 'Event', 'Response',
-        'Operation', 'PTPDevice',
-        )
+    'PTPError', 'PTPUnimplemented', 'SessionID', 'TransactionID',
+    'OperationCode', 'ResponseCode', 'EventCode', 'Event', 'Response',
+    'Operation', 'PTPDevice',
+    )
 
 __author__ = 'Luis Mario Domenzain'
 
 
 # Exceptions
+# ----------
 class PTPError(Exception):
     '''PTP implementation exceptions.'''
     pass
@@ -36,6 +39,8 @@ class PTPUnimplemented(PTPError):
     pass
 
 
+# Helper functions
+# ----------------
 def switch_endian(le, be, l, b, n):
     '''Return little, native or big endian.'''
     if (be != le):
@@ -45,6 +50,9 @@ def switch_endian(le, be, l, b, n):
     else:
         return n
 
+
+# Base PTP protocol transaction elements
+# --------------------------------------
 
 # Apparently nobody uses the SessionID field. Even though it is specified in
 # ISO15740:2013(E), no device respects it and the session number is implicit.
@@ -238,38 +246,38 @@ class PTPDevice(object):
         '''Manage reset of TransactionID'''
         if value != 0:
             raise PTPError(
-                    'Current TransactionID should not be set. Only reset.'
-                    )
+                'Current TransactionID should not be set. Only reset.'
+            )
         else:
             self.__transaction_id = 0
 
     def __init__(self):
         raise PTPUnimplemented(
-                'Please implement PTP device setup for this transport.'
-                )
+            'Please implement PTP device setup for this transport.'
+        )
 
     def send(self, ptp_container, payload):
         '''Operation with dataphase from initiator to responder'''
         raise PTPUnimplemented(
-                'Please implement a PTP dataphase send for this transport.'
-                )
+            'Please implement a PTP dataphase send for this transport.'
+        )
 
     def recv(self, ptp_container):
         '''Operation with dataphase from responder to initiator'''
         raise PTPUnimplemented(
-                'Please implement PTP dataphase receive for this transport.'
-                )
+            'Please implement PTP dataphase receive for this transport.'
+        )
 
     def mesg(self, ptp_container):
         '''Operation with no dataphase'''
         raise PTPUnimplemented(
-                'Please implement PTP no-dataphase command for this transport.'
-                )
+            'Please implement PTP no-dataphase command for this transport.'
+        )
 
     def event(self, wait=False):
         raise PTPUnimplemented(
             'Please implement a PTP event for this transport.'
-            )
+        )
 
     @property
     def session_id(self):
@@ -308,7 +316,7 @@ class PTPDevice(object):
             SessionID=0,
             TransactionID=self.__transaction,
             Parameter=[self.__session, 0, 0, 0, 0]
-            )
+        )
         response = self.mesg(ptp)
         return response
 
@@ -318,6 +326,6 @@ class PTPDevice(object):
             SessionID=self.__session,
             TransactionID=self.__transaction,
             Parameter=[0, 0, 0, 0, 0]
-            )
+        )
         response = self.mesg(ptp)
         return response

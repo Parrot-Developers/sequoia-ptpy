@@ -14,6 +14,7 @@ from construct import (
         Container, Struct, Enum, UNInt16, UNInt32, Array, BitField, ULInt16,
         ULInt32, UBInt16, UBInt32
         )
+from contextlib import contextmanager
 
 __all__ = (
         'PTPError', 'PTPUnimplemented', 'SessionID', 'TransactionID',
@@ -256,6 +257,34 @@ class PTPDevice(object):
         raise PTPUnimplemented(
             'Please implement a PTP event for this transport.'
             )
+
+    @property
+    def session_id(self):
+        '''Expose internat SessionID'''
+        return self.__session
+
+    @session_id.setter
+    def session_id(self, value):
+        '''Ignore external modifications to SessionID'''
+        pass
+
+
+    @contextmanager
+    def session(self):
+        '''Manage session with context manager.
+
+        Once transport specifig interfaces are defined, this allows easier,
+        more nuclear sessions:
+
+            ptp = PTPUSB()
+            with ptp.session():
+                ptp.get_device_info()
+        '''
+        try:
+            self.open_session()
+            yield
+        finally:
+            self.close_session()
 
     def open_session(self):
         self.__session += 1

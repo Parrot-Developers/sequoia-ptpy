@@ -170,6 +170,9 @@ class PTPUSB(PTPDevice):
                 self.__FullResponse.sizeof() +
                 self.__Header.sizeof()
                 )
+        # TODO: Parse header only and then read the rest o the transaction.
+        # Parsing the transaction will fail until a full transaction is
+        # available.
         return self.__Transaction.parse(response)
 
     def __send(self, ptp_container):

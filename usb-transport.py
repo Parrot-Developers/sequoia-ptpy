@@ -13,6 +13,7 @@ from ptp import (
         PTPDevice, PTPError, ResponseCode, EventCode, OperationCode,
         TransactionID, Parameter
         )
+from parrot import *
 from construct import (
         Container, Array, ULInt32, ULInt16, Struct, Bytes, ExprAdapter,
         Embedded, Enum, Range
@@ -288,11 +289,6 @@ class PTPUSB(PTPDevice):
 
 if __name__ == "__main__":
     camera = PTPUSB()
-    print 'Open and close.'
-    print camera.open_session()
-    print camera.close_session()
-
-    print 'Event wait with context manager.'
     with camera.session():
-        for i in range(10):
-            print camera.event(wait=True)
+        print camera.get_device_info()
+    print camera.get_device_info()

@@ -164,11 +164,21 @@ class PTPUSB(PTPDevice):
                     return True
         return False
 
+    def __recv(self):
+        '''Helper method for receiving non-event data.'''
+        response = self.__inep.read(
+                self.__FullResponse.sizeof() +
+                self.__Header.sizeof()
+                )
+        return self.__Transaction.parse(response)
+
+    def __send(self, ptp_container):
+        '''Helper method for sending data.'''
+        transaction = self.__Transaction.build(ptp_container)
+        self.__outep.write(transaction)
+
     def send(self, ptp_container, data):
         '''Transfer operation with dataphase from initiator to responder'''
-
-    def __recv_data():
-        '''Helper method for getting data'''
 
     def recv(self, ptp_container):
         '''Transfer operation with dataphase from responder to initiator.'''

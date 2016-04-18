@@ -166,14 +166,18 @@ class PTPUSB(PTPDevice):
 
     def __recv(self):
         '''Helper method for receiving non-event data.'''
-        response = self.__inep.read(
+        # Read a full response in one go, and in two goes if there is data.
+        transaction = self.__inep.read(
                 self.__FullResponse.sizeof() +
                 self.__Header.sizeof()
                 )
-        # TODO: Parse header only and then read the rest o the transaction.
-        # Parsing the transaction will fail until a full transaction is
-        # available.
-        return self.__Transaction.parse(response)
+        header = self.__Header.parse(transaction[0:self.__Header.sizeof()])
+        if header.Type != 'Response' and header.Type != 'Data':
+            raise PTPError('Unexpected USB')
+        remaining = header.Length - len(transaction)
+        if remaining > 0:
+            transaction += self.__inep.read(remaining)
+        return self.__Transaction.parse(transaction)
 
     def __send(self, ptp_container):
         '''Helper method for sending data.'''

@@ -185,18 +185,24 @@ class PTPUSB(PTPDevice):
 
     def mesg(self, ptp_container):
         '''Transfer operation without dataphase.'''
-        operation = self.__Operation.build(ptp_container)
-        ptp_container['Type'] = 'Command'
-        ptp_container['Payload'] = operation
-        transaction = self.__Transaction.build(ptp_container)
-        self.__outep.write(transaction)
-        response = self.__inep.read(
-                self.__FullResponse.sizeof() +
-                self.__Header.sizeof()
-                )
-        transaction = self.__Transaction.parse(response)
+        # Don't modify original container to keep abstraction barrier.
+        ptp = Container(**ptp_container)
+
+        operation = self.__Operation.build(ptp)
+        ptp['Type'] = 'Command'
+        ptp['Payload'] = operation
+        self.__send(ptp)
+        # Get actual response and sneak in implicit SessionID and mising
+        # parameters for FullResponse.
+        transaction = self.__recv()
         payload = transaction.Payload
-        return self.__PartialResponse.parse(payload)
+        response = self.__PartialResponse.parse(payload)
+        response['SessionID'] = self.session_id
+        response.Parameter = (
+                response.Parameter +
+                (5 - len(response.Parameter))*[0]
+                )
+        return response
 
     def event(self, wait=False):
         '''Check event.
@@ -215,12 +221,18 @@ class PTPUSB(PTPDevice):
                 return None
         transaction = self.__Transaction.parse(response)
         payload = transaction.Payload
-
-        return self.__PartialEvent.parse(payload)
+        event = self.__PartialEvent.parse(payload)
+        event.Parameter = event.Parameter + (3 - len(event.Parameter))*[0]
+        event['SessionID'] = self.session_id
+        return event
 
 if __name__ == "__main__":
     camera = PTPUSB()
+    print 'Open and close.'
     print camera.open_session()
-    for i in range(10):
-        print camera.event(wait=True)
     print camera.close_session()
+
+    print 'Event wait with context manager.'
+    with camera.session():
+        for i in range(10):
+            print camera.event(wait=True)

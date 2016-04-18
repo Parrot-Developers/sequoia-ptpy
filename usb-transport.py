@@ -60,32 +60,32 @@ class PTPUSB(PTPDevice):
             )
     __Operation = Struct(
             'Operation',
-            OperationCode(le=True),
-            TransactionID(le=True),
+            OperationCode(_le_=True),
+            TransactionID(_le_=True),
             Array(5, Parameter),
             )
     __FullResponse = Struct(
             'Response',
-            ResponseCode(le=True),
-            TransactionID(le=True),
+            ResponseCode(_le_=True),
+            TransactionID(_le_=True),
             Array(5, Parameter),
             )
     __PartialResponse = Struct(
             'Response',
-            ResponseCode(le=True),
-            TransactionID(le=True),
+            ResponseCode(_le_=True),
+            TransactionID(_le_=True),
             Range(0, 5, Parameter),
             )
     __FullEvent = Struct(
             'Event',
-            EventCode(le=True),
-            TransactionID(le=True),
+            EventCode(_le_=True),
+            TransactionID(_le_=True),
             Array(3, Parameter)
             )
     __PartialEvent = Struct(
             'Event',
-            EventCode(le=True),
-            TransactionID(le=True),
+            EventCode(_le_=True),
+            TransactionID(_le_=True),
             Range(0, 3, Parameter)
             )
     __TransactionBase = Struct(

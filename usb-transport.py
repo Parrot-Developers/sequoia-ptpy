@@ -62,31 +62,31 @@ class PTPUSB(PTPDevice):
             'Operation',
             OperationCode(_le_=True),
             TransactionID(_le_=True),
-            Array(5, Parameter),
+            Range(0, 5, Parameter(_le_=True)),
             )
     __FullResponse = Struct(
             'Response',
             ResponseCode(_le_=True),
             TransactionID(_le_=True),
-            Array(5, Parameter),
+            Array(5, Parameter(_le_=True)),
             )
     __PartialResponse = Struct(
             'Response',
             ResponseCode(_le_=True),
             TransactionID(_le_=True),
-            Range(0, 5, Parameter),
+            Range(0, 5, Parameter(_le_=True)),
             )
     __FullEvent = Struct(
             'Event',
             EventCode(_le_=True),
             TransactionID(_le_=True),
-            Array(3, Parameter)
+            Array(3, Parameter(_le_=True))
             )
     __PartialEvent = Struct(
             'Event',
             EventCode(_le_=True),
             TransactionID(_le_=True),
-            Range(0, 3, Parameter)
+            Range(0, 3, Parameter(_le_=True))
             )
     __TransactionBase = Struct(
             'Transaction',
@@ -167,17 +167,11 @@ class PTPUSB(PTPDevice):
 
     def __recv(self):
         '''Helper method for receiving non-event data.'''
-        # Read a full response in one go, and in two goes if there is data.
-        transaction = self.__inep.read(
-                self.__FullResponse.sizeof() +
-                self.__Header.sizeof()
-                )
+        # Read up two megabytes and let PyUSB manage the looping.
+        transaction = self.__inep.read(2*(10**6))
         header = self.__Header.parse(transaction[0:self.__Header.sizeof()])
-        if header.Type != 'Response' and header.Type != 'Data':
-            raise PTPError('Unexpected USB')
-        remaining = header.Length - len(transaction)
-        if remaining > 0:
-            transaction += self.__inep.read(remaining)
+        if header.Type not in ['Response', 'Data']:
+            raise PTPError('Unexpected USB transfer type.')
         return self.__Transaction.parse(transaction)
 
     def __send(self, ptp_container):
@@ -187,21 +181,78 @@ class PTPUSB(PTPDevice):
 
     def send(self, ptp_container, data):
         '''Transfer operation with dataphase from initiator to responder'''
+        # Don't modify original container to keep abstraction barrier.
+        ptp = Container(**ptp_container)
+        # Don't send unused parameters
+        while not ptp.Parameter[-1]:
+            ptp.Parameter.pop()
+            if len(ptp.Parameter) == 0:
+                break
+        # Send request
+        operation = self.__Operation.build(ptp)
+        ptp['Type'] = 'Command'
+        ptp['Payload'] = operation
+        self.__send(ptp)
+        # Send data
+        ptp['Type'] = 'Data'
+        ptp['Payload'] = data
+        self.__send(ptp)
+        # Get response and sneak in implicit SessionID and mising parameters.
+        transaction = self.__recv()
+        payload = transaction.Payload
+        response = self.__PartialResponse.parse(payload)
+        response['SessionID'] = self.session_id
+        response.Parameter = (
+                response.Parameter +
+                (5 - len(response.Parameter))*[0]
+                )
+        return response
 
     def recv(self, ptp_container):
         '''Transfer operation with dataphase from responder to initiator.'''
+        # Don't modify original container to keep abstraction barrier.
+        ptp = Container(**ptp_container)
+        # Don't send unused parameters
+        while not ptp.Parameter[-1]:
+            ptp.Parameter.pop()
+            if len(ptp.Parameter) == 0:
+                break
+        # Send request
+        operation = self.__Operation.build(ptp)
+        ptp['Type'] = 'Command'
+        ptp['Payload'] = operation
+        self.__send(ptp)
+        # Read data
+        dataphase = self.__recv()
+        # Get response and sneak in implicit SessionID, Data and mising
+        # parameters.
+        transaction = self.__recv()
+        payload = transaction.Payload
+        response = self.__PartialResponse.parse(payload)
+        response['SessionID'] = self.session_id
+        response['Data'] = dataphase.Payload
+        response.Parameter = (
+                response.Parameter +
+                (5 - len(response.Parameter))*[0]
+                )
+        return response
 
     def mesg(self, ptp_container):
         '''Transfer operation without dataphase.'''
         # Don't modify original container to keep abstraction barrier.
         ptp = Container(**ptp_container)
-
+        # Don't send unused parameters
+        while not ptp.Parameter[-1]:
+            ptp.Parameter.pop()
+            if len(ptp.Parameter) == 0:
+                break
+        # Send request
         operation = self.__Operation.build(ptp)
         ptp['Type'] = 'Command'
         ptp['Payload'] = operation
         self.__send(ptp)
-        # Get actual response and sneak in implicit SessionID and mising
-        # parameters for FullResponse.
+        # Get response and sneak in implicit SessionID and mising parameters
+        # for FullResponse.
         transaction = self.__recv()
         payload = transaction.Payload
         response = self.__PartialResponse.parse(payload)
@@ -227,6 +278,7 @@ class PTPUSB(PTPDevice):
             # Ignore timeout.
             if e.errno == 110:
                 return None
+        # Check for event adding SessionID, and parameters as necessary.
         transaction = self.__Transaction.parse(response)
         payload = transaction.Payload
         event = self.__PartialEvent.parse(payload)

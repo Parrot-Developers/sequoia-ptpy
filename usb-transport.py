@@ -13,14 +13,13 @@ from ptp import (
         PTPDevice, PTPError, ResponseCode, EventCode, OperationCode,
         TransactionID, Parameter
         )
-
 from construct import (
         Container, Array, ULInt32, ULInt16, Struct, Bytes, ExprAdapter,
         Embedded, Enum, Range
         )
 
 __all__ = ('PTPUSB',)
-__author__ = ('Luis Mario Domenzain',)
+__author__ = 'Luis Mario Domenzain'
 
 PTP_USB_CLASS = 6
 

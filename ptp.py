@@ -21,7 +21,7 @@ __all__ = (
         'Operation', 'PTPDevice',
         )
 
-__author__ = ('Luis Mario Domenzain',)
+__author__ = 'Luis Mario Domenzain'
 
 
 # Exceptions

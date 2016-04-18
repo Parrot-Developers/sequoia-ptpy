@@ -116,7 +116,7 @@ def OperationCode(_le_=False, _be_=False, **vendor_operations):
         GetFilesystemManifest=0x1023,
         GetStreamInfo=0x1024,
         GetStream=0x1025,
-        **vendor_codes
+        **vendor_operations
         )
 
 

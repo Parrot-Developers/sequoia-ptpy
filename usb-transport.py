@@ -104,6 +104,7 @@ class PTPUSB(PTPDevice):
 
     def __init__(self, dev=None):
         '''Instantiate the first available PTP device over USB'''
+        self._set_endian(little=True)
         # Find all devices claiming to be Cameras and get the endpoints for the
         # first one that works.
         devs = usb.core.find(

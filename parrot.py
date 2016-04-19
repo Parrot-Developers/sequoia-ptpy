@@ -77,3 +77,9 @@ class PTPDevice(ptp.PTPDevice):
             MagnetoCalibrationStatus=0xC202,
             **product_events
         )
+
+    def _FilesystemType(self, **product_filesystem_types):
+        return ptp.PTPDevice._ResponseCode(
+            self,
+            **product_filesystem_types
+        )

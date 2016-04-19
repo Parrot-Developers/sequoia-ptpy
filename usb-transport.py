@@ -295,5 +295,8 @@ if __name__ == "__main__":
     camera = PTPUSB()
     print camera.get_device_info()
     with camera.session():
-            print camera.get_device_info()
-            print camera.get_storage_ids()
+        print camera.get_device_info()
+        storage_ids = camera.get_storage_ids()
+        print storage_ids
+        for storage_id in storage_ids:
+            print camera.get_storage_info(storage_id)

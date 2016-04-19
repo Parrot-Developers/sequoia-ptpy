@@ -14,6 +14,7 @@ from construct import (
     Container, Array, BitField, Debugger, Enum, ExprAdapter,
     LengthValueAdapter, Pass, PrefixedArray, Rename, Sequence, Struct, UBInt16,
     UBInt32, UBInt8, ULInt16, ULInt32, ULInt8, UNInt16, UNInt32, UNInt8,
+    UBInt64, ULInt64, UNInt64
     )
 from contextlib import contextmanager
 
@@ -61,6 +62,9 @@ class PTPDevice(object):
 
     def _UInt32(self, _le_=False, _be_=False):
         return switch_endian(_le_, _be_, ULInt32, UBInt32, UNInt32)
+
+    def _UInt64(self, _le_=False, _be_=False):
+        return switch_endian(_le_, _be_, ULInt64, UBInt64, UNInt64)
 
     def _Parameter(self, _le_=False, _be_=False):
         '''Return desired endianness for Parameter'''
@@ -326,6 +330,7 @@ class PTPDevice(object):
         )
 
     def _DeviceInfo(self):
+        '''Return desired endianness for DeviceInfo'''
         return Struct(
             'DeviceInfo',
             self._UInt16('StandardVersion'),
@@ -344,10 +349,73 @@ class PTPDevice(object):
             self._PTPString('SerialNumber'),
         )
 
+    def _StorageType(self):
+        '''Return desired endianness for StorageType'''
+        return Enum(
+            self._UInt16('StorageType'),
+            _default_=Pass,
+            Undefined=0x0000,
+            FixedROM=0x0001,
+            RemovableROM=0x0002,
+            FixedRAM=0x0003,
+            RemovableRAM=0x0004,
+        )
+
+    def _FilesystemType(self, **vendor_filesystem_types):
+        '''Return desired endianness for known FilesystemType'''
+        return Enum(
+            self._UInt16('FilesystemType'),
+            _default_=Pass,
+            Undefined=0x0000,
+            GenericFlat=0x0001,
+            GenericHierarchical=0x0002,
+            DCF=0x0003,
+            **vendor_filesystem_types
+        )
+
+    def _AccessCapability(self):
+        '''Return desired endianness for AccessCapability'''
+        return Enum(
+            self._UInt16('AccessCapability'),
+            _default_=Pass,
+            ReadWrite=0x0000,
+            ReadOnlyWithoutObjectDeletion=0x0001,
+            ReadOnlyWithObjectDeletion=0x0002,
+        )
+
+    def _StorageInfo(self):
+        '''Return desired endianness for StorageInfo'''
+        return Struct(
+            'StorageInfo',
+            self._StorageType,
+            self._FilesystemType,
+            self._AccessCapability,
+            self._UInt64('MaxCapacity'),
+            self._UInt64('FreeSpaceInBytes'),
+            self._UInt32('FreeSpaceInImages'),
+            self._PTPString('StorageDescription'),
+            self._PTPString('VolumeLabel'),
+        )
+
     def _StorageIDs(self):
         '''Return desired endianness for StorageID'''
         # TODO: automatically set and parse PhysicalID and LogicalID
         return self._PTPArray('StorageIDs', self._UInt32('StorageID'))
+
+    def _DevicePropDesc(self):
+        '''Return desired endianness for DevicePropDesc'''
+        return Struct(
+            'DevicePropDesc',
+            self._PropertyCode,
+            self._DataType,
+            self._GetSet,
+            self._FactoryDefaultFalue,
+            self._CurrentValue,
+            self._FormFlag,
+            self._UInt32('FreeSpaceInImages'),
+            self._PTPString('StorageDescription'),
+            self._PTPString('VolumeLabel'),
+        )
 
     def _set_endian(self, little=False, big=False):
         '''Instantiate constructors to given endianness'''
@@ -358,6 +426,7 @@ class PTPDevice(object):
         self._UInt8 = self._UInt8(_le_=little, _be_=big)
         self._UInt16 = self._UInt16(_le_=little, _be_=big)
         self._UInt32 = self._UInt32(_le_=little, _be_=big)
+        self._UInt64 = self._UInt64(_le_=little, _be_=big)
         self._Parameter = self._Parameter(_le_=little, _be_=big)
 
         # Implicit instantiation. Needs to happen after the above.
@@ -373,6 +442,13 @@ class PTPDevice(object):
         self._Response = self._Response()
         self._Operation = self._Operation()
         self._StorageIDs = self._StorageIDs()
+        self._StorageType = self._StorageType()
+        self._FilesystemType = self._FilesystemType()
+        self._AccessCapability = self._AccessCapability()
+        self._StorageInfo = self._StorageInfo()
+
+        # TODO: Implement pertinent types and then instantiate.
+        # self._DevicePropDesc = self._DevicePropDesc()
 
     __session = 0
     __transaction_id = 0
@@ -497,3 +573,37 @@ class PTPDevice(object):
         )
         response = self.recv(ptp)
         return self._StorageIDs.parse(response.Data)
+
+    def get_storage_info(self, storage_id):
+        ptp = Container(
+            OperationCode='GetStorageInfo',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[storage_id]
+        )
+        response = self.recv(ptp)
+        return self._StorageInfo.parse(response.Data)
+
+    def get_device_prop_desc(self, device_property):
+        # TODO: Define DevicePropDesc constructor.
+        ptp = Container(
+            OperationCode='GetDevicePropDesc',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[self._PropertyCode.build(device_property),
+                       0, 0, 0, 0]
+        )
+        response = self.recv(ptp)
+        return self._DevicePropDesc.parse(response.Data)
+
+    def get_device_property_value(self, device_property):
+        # TODO: Define DevicePropValue constructor.
+        ptp = Container(
+            OperationCode='GetDevicePropValue',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[self._PropertyCode.build(device_property),
+                       0, 0, 0, 0]
+        )
+        response = self.recv(ptp)
+        return self._DevicePropValue.parse(response.Data)

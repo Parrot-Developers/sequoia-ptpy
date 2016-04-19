@@ -9,11 +9,8 @@ from usb.util import (
         endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK,
         ENDPOINT_TYPE_INTR, ENDPOINT_OUT, ENDPOINT_IN
         )
-from ptp import (
-        PTPDevice, PTPError, ResponseCode, EventCode, OperationCode,
-        TransactionID, Parameter
-        )
-from parrot import *
+from ptp import PTPError
+from parrot import PTPDevice
 from construct import (
         Container, Array, ULInt32, ULInt16, Struct, Bytes, ExprAdapter,
         Embedded, Enum, Range
@@ -44,68 +41,10 @@ class find_class(object):
 
 class PTPUSB(PTPDevice):
     '''Implement bare PTP Device with USB transport.'''
-    # Redefine constructors for USB.
-    __Length = ULInt32('Length')
-    __Type = Enum(
-            ULInt16('Type'),
-            Undefined=0x0000,
-            Command=0x0001,
-            Data=0x0002,
-            Response=0x0003,
-            Event=0x0004,
-            )
-    __Header = Struct(
-            'Header',
-            __Length,
-            __Type,
-            )
-    __Operation = Struct(
-            'Operation',
-            OperationCode(_le_=True),
-            TransactionID(_le_=True),
-            Range(0, 5, Parameter(_le_=True)),
-            )
-    __FullResponse = Struct(
-            'Response',
-            ResponseCode(_le_=True),
-            TransactionID(_le_=True),
-            Array(5, Parameter(_le_=True)),
-            )
-    __PartialResponse = Struct(
-            'Response',
-            ResponseCode(_le_=True),
-            TransactionID(_le_=True),
-            Range(0, 5, Parameter(_le_=True)),
-            )
-    __FullEvent = Struct(
-            'Event',
-            EventCode(_le_=True),
-            TransactionID(_le_=True),
-            Array(3, Parameter(_le_=True))
-            )
-    __PartialEvent = Struct(
-            'Event',
-            EventCode(_le_=True),
-            TransactionID(_le_=True),
-            Range(0, 3, Parameter(_le_=True))
-            )
-    __TransactionBase = Struct(
-            'Transaction',
-            Embedded(__Header),
-            Bytes('Payload', lambda ctx, h=__Header: ctx.Length - h.sizeof()),
-            )
-    __Transaction = ExprAdapter(
-            __TransactionBase,
-            encoder=lambda obj, ctx, h=__Header: Container(
-                Length=len(obj.Payload) + h.sizeof(),
-                **obj
-                ),
-            decoder=lambda obj, ctx: obj,
-            )
 
     def __init__(self, dev=None):
         '''Instantiate the first available PTP device over USB'''
-        self._set_endian(little=True)
+        self.__setup_constructors()
         # Find all devices claiming to be Cameras and get the endpoints for the
         # first one that works.
         devs = usb.core.find(
@@ -165,6 +104,73 @@ class PTPUSB(PTPDevice):
                     self.__intf = intf
                     return True
         return False
+
+    def __setup_constructors(self):
+        '''Set endianness and create transport-specific constructors.'''
+        # Set endianness of constructors before using them.
+        self._set_endian(little=True)
+
+        self.__Length = ULInt32('Length')
+        self.__Type = Enum(
+                ULInt16('Type'),
+                Undefined=0x0000,
+                Command=0x0001,
+                Data=0x0002,
+                Response=0x0003,
+                Event=0x0004,
+                )
+        self.__Header = Struct(
+                'Header',
+                self.__Length,
+                self.__Type,
+                )
+        # Apparently nobody uses the SessionID field. Even though it is
+        # specified in ISO15740:2013(E), no device respects it and the session
+        # number is implicit over USB.
+        self.__Operation = Struct(
+                'Operation',
+                self._OperationCode,
+                self._TransactionID,
+                Range(0, 5, self._Parameter),
+                )
+        self.__FullResponse = Struct(
+                'Response',
+                self._ResponseCode,
+                self._TransactionID,
+                Array(5, self._Parameter),
+                )
+        self.__PartialResponse = Struct(
+                'Response',
+                self._ResponseCode,
+                self._TransactionID,
+                Range(0, 5, self._Parameter),
+                )
+        self.__FullEvent = Struct(
+                'Event',
+                self._EventCode,
+                self._TransactionID,
+                Array(3, self._Parameter),
+                )
+        self.__PartialEvent = Struct(
+                'Event',
+                self._EventCode,
+                self._TransactionID,
+                Range(0, 3, self._Parameter)
+                )
+        self.__TransactionBase = Struct(
+                'Transaction',
+                Embedded(self.__Header),
+                Bytes('Payload',
+                      lambda ctx, h=self.__Header: ctx.Length - h.sizeof()),
+                )
+        self.__Transaction = ExprAdapter(
+                self.__TransactionBase,
+                encoder=lambda obj, ctx, h=self.__Header: Container(
+                    Length=len(obj.Payload) + h.sizeof(),
+                    **obj
+                    ),
+                decoder=lambda obj, ctx: obj,
+                )
 
     def __recv(self):
         '''Helper method for receiving non-event data.'''

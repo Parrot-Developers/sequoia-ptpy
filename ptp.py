@@ -329,12 +329,30 @@ class PTPDevice(object):
             **vendor_object_formats
         )
 
+    def _VendorExtensionID(self):
+        return Enum(
+            self._UInt32('VendorExtensionID'),
+            Parrot=0x00000000,
+            EastmanKodak=0x00000001,
+            SeikoEpson=0x00000002,
+            Agilent=0x00000003,
+            Polaroid=0x00000004,
+            AgfaGevaert=0x00000005,
+            Microsoft=0x00000006,
+            Equinox=0x00000007,
+            Viewquest=0x00000008,
+            STMicroelectronics=0x00000009,
+            Nikon=0x0000000A,
+            Canon=0x0000000B,
+            _default_=Pass,
+        )
+
     def _DeviceInfo(self):
         '''Return desired endianness for DeviceInfo'''
         return Struct(
             'DeviceInfo',
             self._UInt16('StandardVersion'),
-            self._UInt32('VendorExtensionID'),
+            self._VendorExtensionID,
             self._UInt16('VendorExtensionVersion'),
             self._PTPString('VendorExtensionDesc'),
             self._UInt16('FunctionalMode'),
@@ -430,6 +448,7 @@ class PTPDevice(object):
         self._Parameter = self._Parameter(_le_=little, _be_=big)
 
         # Implicit instantiation. Needs to happen after the above.
+        self._VendorExtensionID = self._VendorExtensionID()
         self._OperationCode = self._OperationCode()
         self._EventCode = self._EventCode()
         self._PropertyCode = self._PropertyCode()

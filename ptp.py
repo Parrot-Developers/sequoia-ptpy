@@ -81,7 +81,7 @@ class PTPDevice(object):
 
     def _OperationCode(self, **vendor_operations):
         '''Return desired endianness for known OperationCode'''
-        return Debugger(Enum(
+        return Enum(
             self._UInt16('OperationCode'),
             _default_=Pass,
             Undefined=0x1000,
@@ -123,7 +123,7 @@ class PTPDevice(object):
             GetStreamInfo=0x1024,
             GetStream=0x1025,
             **vendor_operations
-            ))
+            )
 
     def _ResponseCode(self, **vendor_responses):
         '''Return desired endianness for known ResponseCode'''

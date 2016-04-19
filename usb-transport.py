@@ -202,7 +202,7 @@ class PTPUSB(PTPDevice):
         ptp['Type'] = 'Data'
         ptp['Payload'] = data
         self.__send(ptp)
-        # Get response and sneak in implicit SessionID and mising parameters.
+        # Get response and sneak in implicit SessionID and missing parameters.
         transaction = self.__recv()
         payload = transaction.Payload
         response = self.__PartialResponse.parse(payload)
@@ -229,7 +229,7 @@ class PTPUSB(PTPDevice):
         self.__send(ptp)
         # Read data
         dataphase = self.__recv()
-        # Get response and sneak in implicit SessionID, Data and mising
+        # Get response and sneak in implicit SessionID, Data and missing
         # parameters.
         transaction = self.__recv()
         payload = transaction.Payload
@@ -256,7 +256,7 @@ class PTPUSB(PTPDevice):
         ptp['Type'] = 'Command'
         ptp['Payload'] = operation
         self.__send(ptp)
-        # Get response and sneak in implicit SessionID and mising parameters
+        # Get response and sneak in implicit SessionID and missing parameters
         # for FullResponse.
         transaction = self.__recv()
         payload = transaction.Payload

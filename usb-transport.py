@@ -123,26 +123,22 @@ class PTPUSB(PTPDevice):
                 'Header',
                 self.__Length,
                 self.__Type,
+                self._OperationCode,
+                self._TransactionID,
                 )
         # Apparently nobody uses the SessionID field. Even though it is
         # specified in ISO15740:2013(E), no device respects it and the session
         # number is implicit over USB.
         self.__Operation = Struct(
                 'Operation',
-                self._OperationCode,
-                self._TransactionID,
                 Range(0, 5, self._Parameter),
                 )
         self.__FullResponse = Struct(
                 'Response',
-                self._ResponseCode,
-                self._TransactionID,
                 Array(5, self._Parameter),
                 )
         self.__PartialResponse = Struct(
                 'Response',
-                self._ResponseCode,
-                self._TransactionID,
                 Range(0, 5, self._Parameter),
                 )
         self.__FullEvent = Struct(
@@ -179,6 +175,8 @@ class PTPUSB(PTPDevice):
         header = self.__Header.parse(transaction[0:self.__Header.sizeof()])
         if header.Type not in ['Response', 'Data']:
             raise PTPError('Unexpected USB transfer type.')
+        while len(transaction) < header.Length:
+            transaction += self.__inep.read(2*(10**6))
         return self.__Transaction.parse(transaction)
 
     def __send(self, ptp_container):

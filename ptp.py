@@ -273,15 +273,15 @@ class PTPDevice(object):
                 Sequence(
                     name,
                     self._UInt8('NumChars'),
-                    Array(lambda ctx: ctx.NumChars, self._UInt16('Char'))
+                    Array(lambda ctx: ctx.NumChars, self._UInt16('Chars'))
                 )
             ),
-            encoder=lambda obj, ctx: Container(
-                name=[ord(c) for c in unicode(obj, encoding='utf16')]+[0]
-            ),
-            decoder=lambda obj, ctx: Container(
-                name=u''.join([unichr(o) for o in obj]).split('\x00')[0]
-            ),
+            encoder=lambda obj, ctx:
+                [] if len(obj) == 0 else [ord(c) for c in unicode(obj)]+[0],
+            decoder=lambda obj, ctx:
+                u''.join(
+                [unichr(o) for o in obj]
+                ).split('\x00')[0],
         )
 
     def _PTPArray(self, name, element):
@@ -561,8 +561,7 @@ class PTPDevice(object):
             Parameter=[0, 0, 0, 0, 0]
         )
         response = self.recv(ptp)
-        # TODO: debug.
-        return Debugger(self._DeviceInfo).parse(response.Data)
+        return self._DeviceInfo.parse(response.Data)
 
     def get_storage_ids(self):
         ptp = Container(

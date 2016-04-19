@@ -272,8 +272,8 @@ class PTPDevice(object):
     def _PTPArray(self, name, element):
         return Struct(
             name,
-            self._UInt32('length'),
-            Array(lambda ctx: ctx.length, element),
+            self._UInt32('NumElements'),
+            Array(lambda ctx: ctx.NumElements, element),
         )
 
     def _ObjectFormatCode(self, **vendor_object_formats):
@@ -327,11 +327,17 @@ class PTPDevice(object):
             self._PTPArray('EventsSupported', self._EventCode),
             self._PTPArray('DevicePropertiesSupported', self._PropertyCode),
             self._PTPArray('CaptureFormats', self._ObjectFormatCode),
+            self._PTPArray('ImageFormats', self._ObjectFormatCode),
             self._PTPString('Manufacturer'),
             self._PTPString('Model'),
             self._PTPString('DeviceVersion'),
             self._PTPString('SerialNumber'),
         )
+
+    def _StorageIDs(self):
+        '''Return desired endianness for StorageID'''
+        # TODO: automatically set and parse PhysicalID and LogicalID
+        return self._PTPArray('StorageIDs', self._UInt32('StorageID'))
 
     def _set_endian(self, little=False, big=False):
         '''Instantiate constructors to given endianness'''
@@ -356,6 +362,7 @@ class PTPDevice(object):
         self._Event = self._Event()
         self._Response = self._Response()
         self._Operation = self._Operation()
+        self._StorageIDs = self._StorageIDs()
 
     __session = 0
     __transaction_id = 0
@@ -470,3 +477,14 @@ class PTPDevice(object):
         response = self.recv(ptp)
         # TODO: debug.
         return Debugger(self._DeviceInfo).parse(response.Data)
+
+    def get_storage_ids(self):
+        ptp = Container(
+            OperationCode='GetStorageIDs',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[0, 0, 0, 0, 0]
+        )
+        response = self.recv(ptp)
+        # TODO: debug.
+        return Debugger(self._StorageIDs).parse(response.Data)

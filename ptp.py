@@ -11,8 +11,9 @@ and may need to be adapted to transport-endianness:
     SessionID(be=True)  # returns big endian constructor
 '''
 from construct import (
-    Container, Struct, Enum, UNInt8, UNInt16, UNInt32, Array, BitField, ULInt8,
-    ULInt16, ULInt32, UBInt8, UBInt16, UBInt32, Pass, PascalString, Debugger
+    Container, Array, BitField, Debugger, Enum, ExprAdapter,
+    LengthValueAdapter, Pass, PrefixedArray, Rename, Sequence, Struct, UBInt16,
+    UBInt32, UBInt8, ULInt16, ULInt32, ULInt8, UNInt16, UNInt32, UNInt8,
     )
 from contextlib import contextmanager
 
@@ -263,17 +264,26 @@ class PTPDevice(object):
 
     def _PTPString(self, name):
         '''Returns a PTP String constructor'''
-        return PascalString(
-            name,
-            length_field=self._UInt8('length'),
-            encoding='utf16'
+        return ExprAdapter(
+            LengthValueAdapter(
+                Sequence(
+                    name,
+                    self._UInt8('NumChars'),
+                    Array(lambda ctx: ctx.NumChars, self._UInt16('Char'))
+                )
+            ),
+            encoder=lambda obj, ctx: Container(
+                name=[ord(c) for c in unicode(obj, encoding='utf16')]+[0]
+            ),
+            decoder=lambda obj, ctx: Container(
+                name=u''.join([unichr(o) for o in obj]).split('\x00')[0]
+            ),
         )
 
     def _PTPArray(self, name, element):
-        return Struct(
-            name,
-            self._UInt32('NumElements'),
-            Array(lambda ctx: ctx.NumElements, element),
+        return PrefixedArray(
+            Rename(name, element),
+            length_field=self._UInt32('NumElements'),
         )
 
     def _ObjectFormatCode(self, **vendor_object_formats):
@@ -486,5 +496,4 @@ class PTPDevice(object):
             Parameter=[0, 0, 0, 0, 0]
         )
         response = self.recv(ptp)
-        # TODO: debug.
-        return Debugger(self._StorageIDs).parse(response.Data)
+        return self._StorageIDs.parse(response.Data)

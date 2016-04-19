@@ -293,6 +293,7 @@ class PTPUSB(PTPDevice):
 
 if __name__ == "__main__":
     camera = PTPUSB()
-    with camera.session():
-        print camera.get_device_info()
     print camera.get_device_info()
+    with camera.session():
+            print camera.get_device_info()
+            print camera.get_storage_ids()

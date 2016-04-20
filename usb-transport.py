@@ -119,48 +119,79 @@ class PTPUSB(PTPDevice):
                 Response=0x0003,
                 Event=0x0004,
                 )
+        # This is just a convenience constructor to get the size of a header.
+        self.__Code = ULInt16('Code')
         self.__Header = Struct(
                 'Header',
+                self.__Length,
+                self.__Type,
+                self.__Code,
+                self._TransactionID,
+                )
+        # These are the actual constructors for parsing and building.
+        self.__CommandHeader = Struct(
+                'CommandHeader',
                 self.__Length,
                 self.__Type,
                 self._OperationCode,
                 self._TransactionID,
                 )
+        self.__ResponseHeader = Struct(
+                'ResponseHeader',
+                self.__Length,
+                self.__Type,
+                self._ResponseCode,
+                self._TransactionID,
+                )
+        self.__EventHeader = Struct(
+                'EventHeader',
+                self.__Length,
+                self.__Type,
+                self._EventCode,
+                self._TransactionID,
+                )
         # Apparently nobody uses the SessionID field. Even though it is
         # specified in ISO15740:2013(E), no device respects it and the session
         # number is implicit over USB.
-        self.__Operation = Struct(
-                'Operation',
-                Range(0, 5, self._Parameter),
-                )
-        self.__FullResponse = Struct(
-                'Response',
-                Array(5, self._Parameter),
-                )
-        self.__PartialResponse = Struct(
-                'Response',
-                Range(0, 5, self._Parameter),
-                )
-        self.__FullEvent = Struct(
-                'Event',
-                self._EventCode,
-                self._TransactionID,
-                Array(3, self._Parameter),
-                )
-        self.__PartialEvent = Struct(
-                'Event',
-                self._EventCode,
-                self._TransactionID,
-                Range(0, 3, self._Parameter)
-                )
-        self.__TransactionBase = Struct(
-                'Transaction',
-                Embedded(self.__Header),
+        self.__Param = Struct('Parameter', Range(0, 5, self._Parameter))
+        self.__FullParam = Struct('Parameter', Array(5, self._Parameter))
+        self.__FullEventParam = Struct('Parameter', Array(3, self._Parameter))
+        self.__CommandTransactionBase = Struct(
+                'Command',
+                Embedded(self.__CommandHeader),
                 Bytes('Payload',
                       lambda ctx, h=self.__Header: ctx.Length - h.sizeof()),
                 )
-        self.__Transaction = ExprAdapter(
-                self.__TransactionBase,
+        self.__CommandTransaction = ExprAdapter(
+                self.__CommandTransactionBase,
+                encoder=lambda obj, ctx, h=self.__Header: Container(
+                    Length=len(obj.Payload) + h.sizeof(),
+                    **obj
+                    ),
+                decoder=lambda obj, ctx: obj,
+                )
+        self.__ResponseTransactionBase = Struct(
+                'Response',
+                Embedded(self.__ResponseHeader),
+                Bytes('Payload',
+                      lambda ctx, h=self.__Header: ctx.Length - h.sizeof()),
+                )
+        self.__ResponseTransaction = ExprAdapter(
+                self.__ResponseTransactionBase,
+                encoder=lambda obj, ctx, h=self.__Header: Container(
+                    Length=len(obj.Payload) + h.sizeof(),
+                    **obj
+                    ),
+                decoder=lambda obj, ctx: obj,
+                )
+        self.__EventTransactionBase = Struct(
+                'Event',
+                Embedded(self.__EventHeader),
+                Bytes('Payload',
+                      lambda ctx, h=self.__Header: ctx.Length - h.sizeof()),
+                )
+        self.__EventTransaction = ExprAdapter(
+                self.__EventTransactionBase,
                 encoder=lambda obj, ctx, h=self.__Header: Container(
                     Length=len(obj.Payload) + h.sizeof(),
                     **obj
@@ -172,16 +203,23 @@ class PTPUSB(PTPDevice):
         '''Helper method for receiving non-event data.'''
         # Read up two megabytes and let PyUSB manage the looping.
         transaction = self.__inep.read(2*(10**6))
-        header = self.__Header.parse(transaction[0:self.__Header.sizeof()])
+        header = self.__ResponseHeader.parse(
+            transaction[0:self.__Header.sizeof()]
+        )
         if header.Type not in ['Response', 'Data']:
-            raise PTPError('Unexpected USB transfer type.')
+            raise PTPError(
+                'Unexpected USB transfer type.'
+                'Expected Response or Data but reveived {}'.format(
+                    transaction.Type
+                )
+            )
         while len(transaction) < header.Length:
             transaction += self.__inep.read(2*(10**6))
-        return self.__Transaction.parse(transaction)
+        return self.__ResponseTransaction.parse(transaction)
 
     def __send(self, ptp_container):
         '''Helper method for sending data.'''
-        transaction = self.__Transaction.build(ptp_container)
+        transaction = self.__CommandTransaction.build(ptp_container)
         self.__outep.write(transaction)
 
     def send(self, ptp_container, data):
@@ -194,9 +232,8 @@ class PTPUSB(PTPDevice):
             if len(ptp.Parameter) == 0:
                 break
         # Send request
-        operation = self.__Operation.build(ptp)
         ptp['Type'] = 'Command'
-        ptp['Payload'] = operation
+        ptp['Payload'] = self.__Param.build(ptp)
         self.__send(ptp)
         # Send data
         ptp['Type'] = 'Data'
@@ -205,7 +242,7 @@ class PTPUSB(PTPDevice):
         # Get response and sneak in implicit SessionID and missing parameters.
         transaction = self.__recv()
         payload = transaction.Payload
-        response = self.__PartialResponse.parse(payload)
+        response = self.__Param.parse(payload)
         response['SessionID'] = self.session_id
         response.Parameter = (
                 response.Parameter +
@@ -223,9 +260,8 @@ class PTPUSB(PTPDevice):
             if len(ptp.Parameter) == 0:
                 break
         # Send request
-        operation = self.__Operation.build(ptp)
         ptp['Type'] = 'Command'
-        ptp['Payload'] = operation
+        ptp['Payload'] = self.__Param.build(ptp)
         self.__send(ptp)
         # Read data
         dataphase = self.__recv()
@@ -233,7 +269,7 @@ class PTPUSB(PTPDevice):
         # parameters.
         transaction = self.__recv()
         payload = transaction.Payload
-        response = self.__PartialResponse.parse(payload)
+        response = self.__Param.parse(payload)
         response['SessionID'] = self.session_id
         response['Data'] = dataphase.Payload
         response.Parameter = (
@@ -252,15 +288,14 @@ class PTPUSB(PTPDevice):
             if len(ptp.Parameter) == 0:
                 break
         # Send request
-        operation = self.__Operation.build(ptp)
         ptp['Type'] = 'Command'
-        ptp['Payload'] = operation
+        ptp['Payload'] = self.__Param.build(ptp)
         self.__send(ptp)
         # Get response and sneak in implicit SessionID and missing parameters
         # for FullResponse.
         transaction = self.__recv()
         payload = transaction.Payload
-        response = self.__PartialResponse.parse(payload)
+        response = self.__Param.parse(payload)
         response['SessionID'] = self.session_id
         response.Parameter = (
                 response.Parameter +
@@ -275,8 +310,8 @@ class PTPUSB(PTPDevice):
         '''
         try:
             response = self.__intep.read(
-                    self.__FullEvent.sizeof() +
-                    self.__Header.sizeof(),
+                    self.__FullEventParam.sizeof() +
+                    self.__EventHeader.sizeof(),
                     timeout=0 if wait else 1
                     )
         except usb.core.USBError as e:
@@ -284,19 +319,22 @@ class PTPUSB(PTPDevice):
             if e.errno == 110:
                 return None
         # Check for event adding SessionID, and parameters as necessary.
-        transaction = self.__Transaction.parse(response)
+        transaction = self.__EventTransaction.parse(response)
+        if transaction.Type != 'Event':
+            raise PTPError(
+                'Unexpected USB transfer type.'
+                'Expected Event but reveived {}'.format(transaction.Type)
+            )
         payload = transaction.Payload
-        event = self.__PartialEvent.parse(payload)
+        event = self.__Param.parse(payload)
         event.Parameter = event.Parameter + (3 - len(event.Parameter))*[0]
         event['SessionID'] = self.session_id
+        event['TransactionID'] = transaction.TransactionID
+        event['EventCode'] = transaction.EventCode
         return event
 
 if __name__ == "__main__":
     camera = PTPUSB()
     print camera.get_device_info()
     with camera.session():
-        print camera.get_device_info()
-        storage_ids = camera.get_storage_ids()
-        print storage_ids
-        for storage_id in storage_ids:
-            print camera.get_storage_info(storage_id)
+        print camera.event(wait=True)

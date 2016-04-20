@@ -39,20 +39,23 @@ class find_class(object):
         return False
 
 
+def find_usb_cameras():
+        return usb.core.find(
+            find_all=True,
+            custom_match=find_class(PTP_USB_CLASS)
+        )
+
+
 class PTPUSB(PTPDevice):
     '''Implement bare PTP Device with USB transport.'''
 
     def __init__(self, dev=None):
         '''Instantiate the first available PTP device over USB'''
         self.__setup_constructors()
-        # Find all devices claiming to be Cameras and get the endpoints for the
-        # first one that works.
-        devs = usb.core.find(
-                find_all=True,
-                custom_match=find_class(PTP_USB_CLASS)
-                )
-        if dev is not None:
-            devs = [dev]
+        # If no device is specified, find all devices claiming to be Cameras
+        # and get the USB endpoints for the first one that works.
+        cameras = find_usb_cameras()
+        devs = [dev] if (dev is not None) else cameras
 
         for dev in devs:
             if self.__setup_device(dev):
@@ -333,8 +336,16 @@ class PTPUSB(PTPDevice):
         event['EventCode'] = transaction.EventCode
         return event
 
+
 if __name__ == "__main__":
-    camera = PTPUSB()
-    print camera.get_device_info()
-    with camera.session():
-        print camera.event(wait=True)
+    devs = find_usb_cameras()
+    for dev in devs:
+        camera = PTPUSB(dev)
+        print camera.get_device_info()
+        with camera.session():
+            ids = camera.get_storage_ids()
+            print ids
+            for storage in ids:
+                print camera.get_storage_info(storage)
+            print camera.event(wait=True)
+            print camera.get_device_prop_desc(0x5002)

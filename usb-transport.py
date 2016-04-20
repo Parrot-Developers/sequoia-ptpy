@@ -13,10 +13,10 @@ from ptp import PTPError
 from parrot import PTPDevice
 from construct import (
         Container, Array, ULInt32, ULInt16, Struct, Bytes, ExprAdapter,
-        Embedded, Enum, Range
+        Embedded, Enum, Range, Debugger
         )
 
-__all__ = ('PTPUSB',)
+__all__ = ('PTPUSB', 'find_usb_cameras')
 __author__ = 'Luis Mario Domenzain'
 
 PTP_USB_CLASS = 6
@@ -205,7 +205,14 @@ class PTPUSB(PTPDevice):
     def __recv(self):
         '''Helper method for receiving non-event data.'''
         # Read up two megabytes and let PyUSB manage the looping.
-        transaction = self.__inep.read(2*(10**6))
+        try:
+            transaction = self.__inep.read(2*(10**6), timeout=1)
+        except usb.core.USBError as e:
+            # Ignore timeout once.
+            if e.errno == 110:
+                transaction = self.__inep.read(2*(10**6), timeout=5000)
+            else:
+                raise e
         header = self.__ResponseHeader.parse(
             transaction[0:self.__Header.sizeof()]
         )
@@ -264,10 +271,19 @@ class PTPUSB(PTPDevice):
                 break
         # Send request
         ptp['Type'] = 'Command'
-        ptp['Payload'] = self.__Param.build(ptp)
+        ptp['Payload'] = Debugger(self.__Param).build(ptp)
         self.__send(ptp)
         # Read data
         dataphase = self.__recv()
+        if dataphase.Type == 'Response':
+            payload = dataphase.Payload
+            response = self.__Param.parse(payload)
+            response['SessionID'] = self.session_id
+            response.Parameter = (
+                    response.Parameter +
+                    (5 - len(response.Parameter))*[0]
+                    )
+            return response
         # Get response and sneak in implicit SessionID, Data and missing
         # parameters.
         transaction = self.__recv()

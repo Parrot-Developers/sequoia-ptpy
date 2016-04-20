@@ -11,10 +11,12 @@ and may need to be adapted to transport-endianness:
     SessionID(be=True)  # returns big endian constructor
 '''
 from construct import (
-    Container, Array, BitField, Debugger, Enum, ExprAdapter,
-    LengthValueAdapter, Pass, PrefixedArray, Rename, Sequence, Struct, UBInt16,
-    UBInt32, UBInt8, ULInt16, ULInt32, ULInt8, UNInt16, UNInt32, UNInt8,
-    UBInt64, ULInt64, UNInt64
+    Container, Array, BitField, Debugger, Embedded, Enum, ExprAdapter,
+    LengthValueAdapter, Pass, PrefixedArray, Rename, Sequence, Struct, Switch,
+    UBInt16, UBInt32, UBInt8, ULInt16, ULInt32, ULInt8, UNInt16, UNInt32,
+    UNInt8, UBInt64, ULInt64, UNInt64, Value, SLInt8, SLInt16, SLInt32,
+    SLInt64, SBInt8, SBInt16, SBInt32, SBInt64, SNInt8, SNInt16, SNInt32,
+    SNInt64
     )
 from contextlib import contextmanager
 
@@ -65,6 +67,37 @@ class PTPDevice(object):
 
     def _UInt64(self, _le_=False, _be_=False):
         return switch_endian(_le_, _be_, ULInt64, UBInt64, UNInt64)
+
+    def _UInt128(self, _le_=False, _be_=False):
+        return switch_endian(
+            _le_,
+            _be_,
+            lambda name: BitField(name, 128, swapped=True),
+            lambda name: BitField(name, 128, swapped=False),
+            lambda name: BitField(name, 128)
+        )
+
+    def _Int8(self, _le_=False, _be_=False):
+        return switch_endian(_le_, _be_, SLInt8, SBInt8, SNInt8)
+
+    def _Int16(self, _le_=False, _be_=False):
+        return switch_endian(_le_, _be_, SLInt16, SBInt16, SNInt16)
+
+    def _Int32(self, _le_=False, _be_=False):
+        return switch_endian(_le_, _be_, SLInt32, SBInt32, SNInt32)
+
+    def _Int64(self, _le_=False, _be_=False):
+        return switch_endian(_le_, _be_, SLInt64, SBInt64, SNInt64)
+
+    def _Int128(self, _le_=False, _be_=False):
+        '''Return desired endianness for Parameter'''
+        return switch_endian(
+            _le_,
+            _be_,
+            BitField('Parameter', 128, signed=True, swapped=True),
+            BitField('Parameter', 128, signed=True, swapped=False),
+            BitField('Parameter', 128, signed=True)
+        )
 
     def _Parameter(self, _le_=False, _be_=False):
         '''Return desired endianness for Parameter'''
@@ -427,19 +460,139 @@ class PTPDevice(object):
         # TODO: automatically set and parse PhysicalID and LogicalID
         return self._PTPArray('StorageIDs', self._UInt32('StorageID'))
 
+    def _DataTypeCode(self, **vendor_datatypes):
+        '''Return desired endianness for DevicePropDesc'''
+        return Enum(
+            self._UInt16('DataTypeCode'),
+            _default_=Pass,
+            Undefined=0x0000,
+            Int128=0x0009,
+            Int128Array=0x4009,
+            Int16=0x0003,
+            Int16Array=0x4003,
+            Int32=0x0005,
+            Int32Array=0x4005,
+            Int64=0x0007,
+            Int64Array=0x4007,
+            Int8=0x0001,
+            Int8Array=0x4001,
+            UInt128=0x000a,
+            UInt128Array=0x400a,
+            UInt16=0x0004,
+            UInt16Array=0x4004,
+            UInt32=0x0006,
+            UInt32Array=0x4006,
+            UInt64=0x0008,
+            UInt64Array=0x4008,
+            UInt8=0x0002,
+            UInt8Array=0x4002,
+            String=0xFFFF,
+            **vendor_datatypes
+        )
+
+    def _DataType(self):
+        return {
+            'Int128': self._Int128('Int128'),
+            'Int128Array': self._PTPArray(
+                'Int128Array', self._Int128('Int128')
+            ),
+            'Int16': self._Int16('Int16'),
+            'Int16Array': self._PTPArray(
+                'Int16Array', self._Int16('Int16')
+            ),
+            'Int32': self._Int32('Int32'),
+            'Int32Array': self._PTPArray(
+                'Int32Array', self._Int32('Int32')
+            ),
+            'Int64': self._Int64('Int64'),
+            'Int64Array': self._PTPArray(
+                'Int64Array', self._Int64('Int64')
+            ),
+            'Int8': self._Int8('Int8'),
+            'Int8Array': self._PTPArray(
+                'Int8Array', self._Int8('Int8')
+            ),
+            'UInt128': self._UInt128('UInt128'),
+            'UInt128Array': self._PTPArray(
+                'UInt128Array', self._UInt128('UInt128')
+            ),
+            'UInt16': self._UInt16('UInt16'),
+            'UInt16Array': self._PTPArray(
+                'UInt16Array', self._UInt16('UInt16')
+            ),
+            'UInt32': self._UInt32('UInt32'),
+            'UInt32Array': self._PTPArray(
+                'UInt32Array', self._UInt32('UInt32')
+            ),
+            'UInt64': self._UInt64('UInt64'),
+            'UInt64Array': self._PTPArray(
+                'UInt64Array', self._UInt64('UInt64')
+            ),
+            'UInt8': self._UInt8('UInt8'),
+            'UInt8Array': self._PTPArray(
+                'UInt8Array', self._UInt8('UInt8')
+            ),
+            'String': self._PTPString('String'),
+            # **vendor_datatypes # TODO: Figure out how to include these
+        }
+
+    def _GetSet(self):
+        return Enum(
+            self._UInt8('GetSet'),
+            _default_=Pass,
+            Get=0x00,
+            GetSet=0x01,
+        )
+
+    def _FormFlag(self):
+        return Enum(
+            self._UInt8('FormFlag'),
+            _default_=Pass,
+            NoForm=0x00,
+            Range=0x01,
+            Enumeration=0x01,
+        )
+
+    def _RangeForm(self, element):
+        return Embedded(
+            Struct(
+                'RangeForm',
+                Rename('MinimumValue', element),
+                Rename('MaximumValue', element),
+                Rename('StepSize', element),
+            )
+        )
+
+    def _EnumerationForm(self, element):
+        return Embedded(
+            PrefixedArray(
+                Rename('SupportedValues', element),
+                length_field=self._UInt16('NumberOfValues'),
+            )
+        )
+
+    def _Form(self, element):
+        return Switch(
+            'Form',
+            lambda ctx: ctx.FormFlag, {
+                'Range': self._RangeForm(element),
+                'Enumeration': self._EnumerationForm(element),
+            },
+            default=Pass,
+        )
+
     def _DevicePropDesc(self):
         '''Return desired endianness for DevicePropDesc'''
         return Struct(
             'DevicePropDesc',
             self._PropertyCode,
-            self._DataType,
+            self._DataTypeCode,
+            Value('DataType', lambda ctx: self._DataType[ctx.DataTypeCode]),
             self._GetSet,
-            self._FactoryDefaultFalue,
-            self._CurrentValue,
+            Rename('FactoryDefaultFalue', lambda ctx: ctx.DataType),
+            Rename('CurrentValue', lambda ctx: ctx.DataType),
             self._FormFlag,
-            self._UInt32('FreeSpaceInImages'),
-            self._PTPString('StorageDescription'),
-            self._PTPString('VolumeLabel'),
+            self._Form(lambda ctx: ctx.DataType),
         )
 
     def _set_endian(self, little=False, big=False):
@@ -452,6 +605,12 @@ class PTPDevice(object):
         self._UInt16 = self._UInt16(_le_=little, _be_=big)
         self._UInt32 = self._UInt32(_le_=little, _be_=big)
         self._UInt64 = self._UInt64(_le_=little, _be_=big)
+        self._UInt128 = self._UInt128(_le_=little, _be_=big)
+        self._Int8 = self._Int8(_le_=little, _be_=big)
+        self._Int16 = self._Int16(_le_=little, _be_=big)
+        self._Int32 = self._Int32(_le_=little, _be_=big)
+        self._Int64 = self._Int64(_le_=little, _be_=big)
+        self._Int128 = self._Int128(_le_=little, _be_=big)
         self._Parameter = self._Parameter(_le_=little, _be_=big)
 
         # Implicit instantiation. Needs to happen after the above.
@@ -474,7 +633,14 @@ class PTPDevice(object):
         self._StorageInfo = self._StorageInfo()
 
         # TODO: Implement pertinent types and then instantiate.
-        # self._DevicePropDesc = self._DevicePropDesc()
+        self._DataTypeCode = self._DataTypeCode()
+        self._DataType = self._DataType()
+        self._GetSet = self._GetSet()
+        self._FormFlag = self._FormFlag()
+        # self._RangeForm = self._RangeForm()
+        # self._EnumerationForm = self._EnumerationForm()
+        # self._Form = self._Form()
+        self._DevicePropDesc = self._DevicePropDesc()
 
     __session = 0
     __session_open = False

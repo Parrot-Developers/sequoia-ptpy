@@ -477,6 +477,7 @@ class PTPDevice(object):
         # self._DevicePropDesc = self._DevicePropDesc()
 
     __session = 0
+    __session_open = False
     __transaction_id = 0
 
     @property
@@ -565,6 +566,7 @@ class PTPDevice(object):
             Parameter=[self.__session, 0, 0, 0, 0]
         )
         response = self.mesg(ptp)
+        self.__session_open = True
         return response
 
     def close_session(self):
@@ -575,6 +577,7 @@ class PTPDevice(object):
             Parameter=[0, 0, 0, 0, 0]
         )
         response = self.mesg(ptp)
+        self.__session_open = False
         return response
 
     def get_device_info(self):
@@ -583,7 +586,7 @@ class PTPDevice(object):
             SessionID=self.__session,
             # GetrDeviceInfo can happen outside a session. But if there is one
             # running just use that one.
-            TransactionID=(self.__transaction if (self.__session != 0) else 0),
+            TransactionID=(self.__transaction if self.__session_open else 0),
             Parameter=[0, 0, 0, 0, 0]
         )
         response = self.recv(ptp)

@@ -779,25 +779,41 @@ class PTPDevice(object):
         return self._StorageInfo.parse(response.Data)
 
     def get_device_prop_desc(self, device_property):
+        '''Retrieve the property description.
+
+        Accepts a property name of a number.
+        '''
         # TODO: Define DevicePropDesc constructor.
+        if isinstance(device_property, basestring):
+            try:
+                code = self._PropertyCode.encoding[device_property]
+            except Exception:
+                raise PTPError('Unknown property name. Try with a number?')
+        else:
+            code = device_property
         ptp = Container(
             OperationCode='GetDevicePropDesc',
             SessionID=self.__session,
             TransactionID=self.__transaction,
-            Parameter=[self._PropertyCode.build(device_property),
-                       0, 0, 0, 0]
+            Parameter=[code, 0, 0, 0, 0]
         )
         response = self.recv(ptp)
         return self._DevicePropDesc.parse(response.Data)
 
     def get_device_property_value(self, device_property):
         # TODO: Define DevicePropValue constructor.
+        if isinstance(device_property, basestring):
+            try:
+                code = self._PropertyCode.encoding[device_property]
+            except Exception:
+                raise PTPError('Unknown property name. Try with a number?')
+        else:
+            code = device_property
         ptp = Container(
             OperationCode='GetDevicePropValue',
             SessionID=self.__session,
             TransactionID=self.__transaction,
-            Parameter=[self._PropertyCode.build(device_property),
-                       0, 0, 0, 0]
+            Parameter=[code, 0, 0, 0, 0]
         )
         response = self.recv(ptp)
         return self._DevicePropValue.parse(response.Data)

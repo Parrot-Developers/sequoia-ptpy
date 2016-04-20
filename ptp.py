@@ -332,7 +332,6 @@ class PTPDevice(object):
     def _VendorExtensionID(self):
         return Enum(
             self._UInt32('VendorExtensionID'),
-            Parrot=0x00000000,
             EastmanKodak=0x00000001,
             SeikoEpson=0x00000002,
             Agilent=0x00000003,
@@ -344,6 +343,11 @@ class PTPDevice(object):
             STMicroelectronics=0x00000009,
             Nikon=0x0000000A,
             Canon=0x0000000B,
+            FotoNation=0x0000000C,
+            PENTAX=0x0000000D,
+            Fuji=0x0000000E,
+            Samsung=0x0000001A,
+            Parrot=0x00000026,
             _default_=Pass,
         )
 

@@ -5,7 +5,7 @@ extension:
 
     from ptp import *
     # Here PTPDevice is unextended
-    from vendors.parrot import *
+    from vendors.canon import *
     # Here PTPDevice has a vendor extension
     from transport.usb import *
     # Here PTPDevice can now be instantiated over transport
@@ -24,7 +24,6 @@ class PTPDevice(ptp.PTPDevice):
             BeepMode=0xD001,
             ViewfinderMode=0xD003,
             ImageQuality=0xD006,
-            D007=0xD007,
             CanonImageSize=0xD008,
             CanonFlashMode=0xD00A,
             TvAvSetting=0xD00C,
@@ -36,7 +35,6 @@ class PTPDevice(ptp.PTPDevice):
             Aperture=0xD01D,
             ShutterSpeed=0xD01E,
             ExpCompensation=0xD01F,
-            D029=0xD029,
             Zoom=0xD02A,
             SizeQualityMode=0xD02C,
             FlashMemory=0xD031,
@@ -47,7 +45,6 @@ class PTPDevice(ptp.PTPDevice):
             RealImageWidth=0xD039,
             PhotoEffect=0xD040,
             AssistLight=0xD041,
-            D045=0xD045,
             **product_properties
         )
 

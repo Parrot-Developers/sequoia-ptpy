@@ -718,11 +718,9 @@ class PTPDevice(object):
             with ptp.session():
                 ptp.get_device_info()
         '''
-        try:
-            self.open_session()
-            yield
-        finally:
-            self.close_session()
+        self.open_session()
+        yield
+        self.close_session()
 
     def open_session(self):
         self.__session += 1

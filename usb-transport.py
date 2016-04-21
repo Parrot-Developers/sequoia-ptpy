@@ -232,10 +232,7 @@ class PTPUSB(PTPDevice):
         if transaction.Type == 'Response':
             param = self.__Param.parse(transaction.Payload)
             response['ResponseCode'] = transaction.ResponseCode
-            response['Parameter'] = (
-                param.Parameter +
-                (5 - len(param.Parameter))*[0]
-            )
+            response['Parameter'] = param.Parameter
         else:
             response['OperationCode'] = command.OperationCode
             response['Data'] = transaction.Payload
@@ -324,7 +321,7 @@ class PTPUSB(PTPDevice):
             # Ignore timeout.
             if e.errno == 110:
                 return None
-        # Check for event adding SessionID, and parameters as necessary.
+        # Check for event adding SessionID.
         transaction = self.__EventTransaction.parse(response)
         if transaction.Type != 'Event':
             raise PTPError(
@@ -333,7 +330,6 @@ class PTPUSB(PTPDevice):
             )
         payload = transaction.Payload
         event = self.__Param.parse(payload)
-        event.Parameter = event.Parameter + (3 - len(event.Parameter))*[0]
         event['SessionID'] = self.session_id
         event['TransactionID'] = transaction.TransactionID
         event['EventCode'] = transaction.EventCode

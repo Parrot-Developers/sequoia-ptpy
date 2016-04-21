@@ -12,9 +12,9 @@ from usb.util import (
 from ptp import PTPError
 from parrot import PTPDevice
 from construct import (
-        Container, Array, ULInt32, ULInt16, Struct, Bytes, ExprAdapter,
-        Embedded, Enum, Range, Debugger
-        )
+    Container, Array, ULInt32, ULInt16, Struct, Bytes, ExprAdapter, Embedded,
+    Enum, Range
+)
 
 __all__ = ('PTPUSB', 'find_usb_cameras')
 __author__ = 'Luis Mario Domenzain'
@@ -204,124 +204,110 @@ class PTPUSB(PTPDevice):
 
     def __recv(self):
         '''Helper method for receiving non-event data.'''
-        # Read up two megabytes and let PyUSB manage the looping.
         try:
-            transaction = self.__inep.read(2*(10**6), timeout=1)
+            usbdata = self.__inep.read(2*(10**6), timeout=1)
         except usb.core.USBError as e:
             # Ignore timeout once.
             if e.errno == 110:
-                transaction = self.__inep.read(2*(10**6), timeout=5000)
+                usbdata = self.__inep.read(2*(10**6), timeout=5000)
             else:
                 raise e
-        header = self.__ResponseHeader.parse(
-            transaction[0:self.__Header.sizeof()]
-        )
+        header = self.__ResponseHeader.parse(usbdata[0:self.__Header.sizeof()])
+        command = self.__CommandHeader.parse(usbdata[0:self.__Header.sizeof()])
         if header.Type not in ['Response', 'Data']:
             raise PTPError(
                 'Unexpected USB transfer type.'
-                'Expected Response or Data but reveived {}'.format(
-                    transaction.Type
-                )
+                'Expected Response or Data but reveived {}'.format(header.Type)
             )
-        while len(transaction) < header.Length:
-            transaction += self.__inep.read(2*(10**6))
-        return self.__ResponseTransaction.parse(transaction)
+        while len(usbdata) < header.Length:
+            # TODO: fix case when data is larger than max USB packet size
+            usbdata += self.__inep.read(2*(10**6))
+
+        # Build up container with all PTP info.
+        transaction = self.__ResponseTransaction.parse(usbdata)
+        response = Container(
+            SessionID=self.session_id,
+            TransactionID=transaction.TransactionID,
+        )
+        if transaction.Type == 'Response':
+            param = self.__Param.parse(transaction.Payload)
+            response['ResponseCode'] = transaction.ResponseCode
+            response['Parameter'] = (
+                param.Parameter +
+                (5 - len(param.Parameter))*[0]
+            )
+        else:
+            response['OperationCode'] = command.OperationCode
+            response['Data'] = transaction.Payload
+        return response
 
     def __send(self, ptp_container):
         '''Helper method for sending data.'''
         transaction = self.__CommandTransaction.build(ptp_container)
         self.__outep.write(transaction)
 
-    def send(self, ptp_container, data):
-        '''Transfer operation with dataphase from initiator to responder'''
+    def __send_request(self, ptp_container):
+        '''Send PTP request without checking answer.'''
         # Don't modify original container to keep abstraction barrier.
         ptp = Container(**ptp_container)
         # Don't send unused parameters
-        while not ptp.Parameter[-1]:
-            ptp.Parameter.pop()
-            if len(ptp.Parameter) == 0:
-                break
+        try:
+            while not ptp.Parameter[-1]:
+                ptp.Parameter.pop()
+                if len(ptp.Parameter) == 0:
+                    break
+        except IndexError:
+            # The Parameter list is already empty.
+            pass
+
         # Send request
         ptp['Type'] = 'Command'
         ptp['Payload'] = self.__Param.build(ptp)
         self.__send(ptp)
+
+    def __send_data(self, ptp_container, data):
+        '''Send data without checking answer.'''
+        # Don't modify original container to keep abstraction barrier.
+        ptp = Container(**ptp_container)
         # Send data
         ptp['Type'] = 'Data'
         ptp['Payload'] = data
         self.__send(ptp)
+
+    def send(self, ptp_container, data):
+        '''Transfer operation with dataphase from initiator to responder'''
+        self.__send_request(ptp_container)
+        self.__send_data(ptp_container, data)
         # Get response and sneak in implicit SessionID and missing parameters.
-        transaction = self.__recv()
-        payload = transaction.Payload
-        response = self.__Param.parse(payload)
-        response['SessionID'] = self.session_id
-        response.Parameter = (
-                response.Parameter +
-                (5 - len(response.Parameter))*[0]
-                )
-        return response
+        return self.__recv()
 
     def recv(self, ptp_container):
         '''Transfer operation with dataphase from responder to initiator.'''
-        # Don't modify original container to keep abstraction barrier.
-        ptp = Container(**ptp_container)
-        # Don't send unused parameters
-        while not ptp.Parameter[-1]:
-            ptp.Parameter.pop()
-            if len(ptp.Parameter) == 0:
-                break
-        # Send request
-        ptp['Type'] = 'Command'
-        ptp['Payload'] = Debugger(self.__Param).build(ptp)
-        self.__send(ptp)
-        # Read data
+        self.__send_request(ptp_container)
         dataphase = self.__recv()
-        if dataphase.Type == 'Response':
-            payload = dataphase.Payload
-            response = self.__Param.parse(payload)
-            response['SessionID'] = self.session_id
-            response.Parameter = (
-                    response.Parameter +
-                    (5 - len(response.Parameter))*[0]
-                    )
-            return response
-        # Get response and sneak in implicit SessionID, Data and missing
-        # parameters.
-        transaction = self.__recv()
-        # TODO: refactor this to appear only in one place.
-        payload = transaction.Payload
-        response = self.__Param.parse(payload)
-        response['SessionID'] = self.session_id
-        response['Data'] = dataphase.Payload
-        response.Parameter = (
-                response.Parameter +
-                (5 - len(response.Parameter))*[0]
+        if hasattr(dataphase, 'Data'):
+            response = self.__recv()
+            if (
+                    (ptp_container.OperationCode != dataphase.OperationCode) or
+                    (ptp_container.TransactionID != dataphase.TransactionID) or
+                    (ptp_container.SessionID != dataphase.SessionID) or
+                    (dataphase.TransactionID != response.TransactionID) or
+                    (dataphase.SessionID != response.SessionID)
+            ):
+                raise PTPError(
+                    'Dataphase does not match with requested operation.'
                 )
-        return response
+            response['Data'] = dataphase.Data
+            return response
+        else:
+            return dataphase
 
     def mesg(self, ptp_container):
         '''Transfer operation without dataphase.'''
-        # Don't modify original container to keep abstraction barrier.
-        ptp = Container(**ptp_container)
-        # Don't send unused parameters
-        while not ptp.Parameter[-1]:
-            ptp.Parameter.pop()
-            if len(ptp.Parameter) == 0:
-                break
-        # Send request
-        ptp['Type'] = 'Command'
-        ptp['Payload'] = self.__Param.build(ptp)
-        self.__send(ptp)
+        self.__send_request(ptp_container)
         # Get response and sneak in implicit SessionID and missing parameters
         # for FullResponse.
-        transaction = self.__recv()
-        payload = transaction.Payload
-        response = self.__Param.parse(payload)
-        response['SessionID'] = self.session_id
-        response.Parameter = (
-                response.Parameter +
-                (5 - len(response.Parameter))*[0]
-                )
-        return response
+        return self.__recv()
 
     def event(self, wait=False):
         '''Check event.

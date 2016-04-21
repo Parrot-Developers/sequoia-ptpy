@@ -740,7 +740,7 @@ class PTPDevice(object):
             # SessionID, because no session is open yet.
             SessionID=0,
             TransactionID=self.__transaction,
-            Parameter=[self.__session, 0, 0, 0, 0]
+            Parameter=[self.__session]
         )
         response = self.mesg(ptp)
         self.__session_open = True
@@ -751,7 +751,7 @@ class PTPDevice(object):
             OperationCode='CloseSession',
             SessionID=self.__session,
             TransactionID=self.__transaction,
-            Parameter=[0, 0, 0, 0, 0]
+            Parameter=[]
         )
         response = self.mesg(ptp)
         self.__session_open = False
@@ -764,7 +764,7 @@ class PTPDevice(object):
             # GetrDeviceInfo can happen outside a session. But if there is one
             # running just use that one.
             TransactionID=(self.__transaction if self.__session_open else 0),
-            Parameter=[0, 0, 0, 0, 0]
+            Parameter=[]
         )
         response = self.recv(ptp)
         return self.__parse_if_data(response, self._DeviceInfo)
@@ -774,7 +774,7 @@ class PTPDevice(object):
             OperationCode='GetStorageIDs',
             SessionID=self.__session,
             TransactionID=self.__transaction,
-            Parameter=[0, 0, 0, 0, 0]
+            Parameter=[]
         )
         response = self.recv(ptp)
         return self.__parse_if_data(response, self._StorageIDs)
@@ -817,7 +817,7 @@ class PTPDevice(object):
             OperationCode='GetDevicePropDesc',
             SessionID=self.__session,
             TransactionID=self.__transaction,
-            Parameter=[code, 0, 0, 0, 0]
+            Parameter=[code]
         )
         response = self.recv(ptp)
         return self.__parse_if_data(response, self._DevicePropDesc)
@@ -835,7 +835,7 @@ class PTPDevice(object):
             OperationCode='GetDevicePropValue',
             SessionID=self.__session,
             TransactionID=self.__transaction,
-            Parameter=[code, 0, 0, 0, 0]
+            Parameter=[code]
         )
         response = self.recv(ptp)
         return response

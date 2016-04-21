@@ -718,9 +718,13 @@ class PTPDevice(object):
             with ptp.session():
                 ptp.get_device_info()
         '''
-        self.open_session()
-        yield
-        self.close_session()
+        try:
+            if not self.__session_open:
+                self.open_session()
+            yield
+        finally:
+            if self.__session_open:
+                self.close_session()
 
     def open_session(self):
         self.__session += 1

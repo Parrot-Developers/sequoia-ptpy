@@ -988,6 +988,7 @@ class PTPDevice(object):
                 raise PTPError('Unknown property name. Try with a number?')
         else:
             code = device_property
+
         ptp = Container(
             OperationCode='GetDevicePropDesc',
             SessionID=self.__session,
@@ -1018,6 +1019,7 @@ class PTPDevice(object):
         # return self.__parse_if_data(response, self._DevicePropValue)
 
     def initiate_capture(self, storage_id=0, object_format=0):
+        '''Initiate capture with current camera settings.'''
         # TODO: accept format codes or names
         ptp = Container(
             OperationCode='InitiateCapture',

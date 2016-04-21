@@ -19,6 +19,8 @@ from construct import (
     SNInt64
     )
 from contextlib import contextmanager
+from dateutil.parser import parse as iso8601
+from datetime import datetime
 
 # Module specific
 # _______________
@@ -123,7 +125,13 @@ class PTPDevice(object):
 
     def _DateTime(self):
         '''Return desired endianness for DateTime'''
-        return self._PTPString('DateTime')
+        return ExprAdapter(
+            self._PTPString('DateTime'),
+            encoder=lambda obj, ctx:
+                # TODO: Support timezone encoding.
+                datetime.strftime(obj, '%Y%m%dT%H%M%S.%f')[:-5],
+            decoder=lambda obj, ctx: iso8601(obj),
+        )
 
     def _OperationCode(self, **vendor_operations):
         '''Return desired endianness for known OperationCode'''

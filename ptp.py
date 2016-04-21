@@ -11,10 +11,10 @@ and may need to be adapted to transport-endianness:
     SessionID(be=True)  # returns big endian constructor
 '''
 from construct import (
-    Container, Array, BitField, Debugger, Embedded, Enum, ExprAdapter,
+    Container, Array, BitField, Embedded, Enum, ExprAdapter,
     LengthValueAdapter, Pass, PrefixedArray, Rename, Sequence, Struct, Switch,
     UBInt16, UBInt32, UBInt8, ULInt16, ULInt32, ULInt8, UNInt16, UNInt32,
-    UNInt8, UBInt64, ULInt64, UNInt64, Value, SLInt8, SLInt16, SLInt32,
+    UNInt8, UBInt64, ULInt64, UNInt64, SLInt8, SLInt16, SLInt32,
     SLInt64, SBInt8, SBInt16, SBInt32, SBInt64, SNInt8, SNInt16, SNInt32,
     SNInt64
     )
@@ -94,9 +94,9 @@ class PTPDevice(object):
         return switch_endian(
             _le_,
             _be_,
-            BitField('Parameter', 128, signed=True, swapped=True),
-            BitField('Parameter', 128, signed=True, swapped=False),
-            BitField('Parameter', 128, signed=True)
+            lambda name: BitField(name, 128, signed=True, swapped=True),
+            lambda name: BitField(name, 128, signed=True, swapped=False),
+            lambda name: BitField(name, 128, signed=True)
         )
 
     def _Parameter(self, _le_=False, _be_=False):
@@ -460,7 +460,7 @@ class PTPDevice(object):
         # TODO: automatically set and parse PhysicalID and LogicalID
         return self._PTPArray('StorageIDs', self._UInt32('StorageID'))
 
-    def _DataTypeCode(self, **vendor_datatypes):
+    def _DataTypeCode(self, **vendor_datatype_codes):
         '''Return desired endianness for DevicePropDesc'''
         return Enum(
             self._UInt16('DataTypeCode'),
@@ -487,11 +487,11 @@ class PTPDevice(object):
             UInt8=0x0002,
             UInt8Array=0x4002,
             String=0xFFFF,
-            **vendor_datatypes
+            **vendor_datatype_codes
         )
 
-    def _DataType(self):
-        return {
+    def _DataType(self, **vendor_datatypes):
+        datatypes = {
             'Int128': self._Int128('Int128'),
             'Int128Array': self._PTPArray(
                 'Int128Array', self._Int128('Int128')
@@ -533,8 +533,13 @@ class PTPDevice(object):
                 'UInt8Array', self._UInt8('UInt8')
             ),
             'String': self._PTPString('String'),
-            # **vendor_datatypes # TODO: Figure out how to include these
         }
+        datatypes.update(vendor_datatypes if vendor_datatypes else {})
+        return Switch(
+            'DataType',
+            lambda ctx: ctx.DataTypeCode,
+            datatypes
+        )
 
     def _GetSet(self):
         return Enum(
@@ -587,12 +592,11 @@ class PTPDevice(object):
             'DevicePropDesc',
             self._PropertyCode,
             self._DataTypeCode,
-            Value('DataType', lambda ctx: self._DataType[ctx.DataTypeCode]),
             self._GetSet,
-            Rename('FactoryDefaultFalue', lambda ctx: ctx.DataType),
-            Rename('CurrentValue', lambda ctx: ctx.DataType),
+            Rename('FactoryDefaultFalue', self._DataType),
+            Rename('CurrentValue', self._DataType),
             self._FormFlag,
-            self._Form(lambda ctx: ctx.DataType),
+            self._Form(self._DataType),
         )
 
     def _set_endian(self, little=False, big=False):

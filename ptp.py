@@ -755,7 +755,8 @@ class PTPDevice(object):
             Parameter=[self.__session]
         )
         response = self.mesg(ptp)
-        self.__session_open = True
+        if response.ResponseCode == 'OK':
+            self.__session_open = True
         return response
 
     def close_session(self):
@@ -766,8 +767,35 @@ class PTPDevice(object):
             Parameter=[]
         )
         response = self.mesg(ptp)
-        self.__session_open = False
+        if response.ResponseCode == 'OK':
+            self.__session_open = False
         return response
+
+    def reset_device(self):
+        ptp = Container(
+            OperationCode='ResetDevice',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[],
+        )
+        response = self.recv(ptp)
+        if response.ResponseCode == 'OK':
+            self.__session_open = False
+        return response
+
+    def power_down(self):
+        ptp = Container(
+            OperationCode='PowerDown',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[],
+        )
+        response = self.recv(ptp)
+        if response.ResponseCode == 'OK':
+            self.__session_open = False
+        return response
+
+    # TODO: Add decorator to check there is an open session.
 
     def get_device_info(self):
         ptp = Container(
@@ -801,16 +829,63 @@ class PTPDevice(object):
         response = self.recv(ptp)
         return self.__parse_if_data(response, self._StorageInfo)
 
-    def get_num_objects(self, storage_id, object_format=0, object_handle=0):
+    def get_num_objects(
+            self,
+            storage_id,
+            object_format=0,
+            object_handle=0,
+            all_storage_ids=False,
+            all_formats=False,
+            in_root=False,
+    ):
+        '''Total number of objects present in `storage_id`'''
         # TODO: accept object_format code or its name.
+        if object_handle != 0 and in_root and object_handle != 0xffffffff:
+            raise ValueError(
+                'Cannot get both root and {}'.format(object_handle)
+            )
         ptp = Container(
             OperationCode='GetNumObjects',
             SessionID=self.__session,
             TransactionID=self.__transaction,
-            Parameter=[storage_id, object_format, object_handle]
+            Parameter=[
+                0xffffffff if all_storage_ids else storage_id,
+                0xffffffff if all_formats else object_format,
+                0xffffffff if in_root else object_handle
+            ]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._StorageInfo)
+        return response.Parameter[0] if response.Parameter else None
+
+    def get_object_handles(
+            self,
+            storage_id,
+            object_format=0,
+            object_handle=0,
+            all_storage_ids=False,
+            all_formats=False,
+            in_root=False,
+    ):
+        '''Return array of ObjectHandles present in `storage_id`'''
+        if object_handle != 0 and in_root and object_handle != 0xffffffff:
+            raise ValueError(
+                'Cannot get both root and {}'.format(object_handle)
+            )
+        ptp = Container(
+            OperationCode='GetObjectHandles',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[
+                0xffffffff if all_storage_ids else storage_id,
+                0xffffffff if all_formats else object_format,
+                0xffffffff if in_root else object_handle
+            ]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(
+            response,
+            self._PTPArray('ObjectHandles', self._ObjectHandle)
+        )
 
     def get_device_prop_desc(self, device_property):
         '''Retrieve the property description.
@@ -843,12 +918,27 @@ class PTPDevice(object):
                 raise PTPError('Unknown property name. Try with a number?')
         else:
             code = device_property
+
         ptp = Container(
             OperationCode='GetDevicePropValue',
             SessionID=self.__session,
             TransactionID=self.__transaction,
-            Parameter=[code]
+            Parameter=[code],
         )
         response = self.recv(ptp)
         return response
         # return self.__parse_if_data(response, self._DevicePropValue)
+
+    def initiate_capture(self, storage_id=0, object_format=0):
+        # TODO: accept format codes or names
+        ptp = Container(
+            OperationCode='InitiateCapture',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[
+                storage_id,
+                object_format,
+            ]
+        )
+        response = self.recv(ptp)
+        return response

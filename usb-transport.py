@@ -344,11 +344,13 @@ if __name__ == "__main__":
     devs = find_usb_cameras()
     for dev in devs:
         camera = PTPUSB(dev)
-        print camera.get_device_info()
+        device_info = camera.get_device_info()
+        print device_info
         with camera.session():
-            ids = camera.get_storage_ids()
-            print ids
-            for storage in ids:
+            for storage in camera.get_storage_ids():
                 print camera.get_storage_info(storage)
+                print camera.get_num_objects(storage)
             print camera.event(wait=True)
-            print camera.get_device_prop_desc(0x5002)
+            for prop in device_info.DevicePropertiesSupported:
+                print camera.get_device_prop_desc(prop)
+                # print camera.get_device_prop_value(prop)

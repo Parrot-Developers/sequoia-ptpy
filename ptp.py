@@ -117,6 +117,14 @@ class PTPDevice(object):
         '''Return desired endianness for TransactionID'''
         return self._UInt32('TransactionID')
 
+    def _ObjectHandle(self):
+        '''Return desired endianness for ObjectHandle'''
+        return self._UInt32('ObjectHandle')
+
+    def _DateTime(self):
+        '''Return desired endianness for DateTime'''
+        return self._PTPString('DateTime')
+
     def _OperationCode(self, **vendor_operations):
         '''Return desired endianness for known OperationCode'''
         return Enum(
@@ -455,10 +463,15 @@ class PTPDevice(object):
             self._PTPString('VolumeLabel'),
         )
 
+    def _StorageID(self):
+        '''Return desired endianness for StorageID'''
+        # TODO: automatically set and parse PhysicalID and LogicalID
+        return self._UInt32('StorageID')
+
     def _StorageIDs(self):
         '''Return desired endianness for StorageID'''
         # TODO: automatically set and parse PhysicalID and LogicalID
-        return self._PTPArray('StorageIDs', self._UInt32('StorageID'))
+        return self._PTPArray('StorageIDs', self._StorageID)
 
     def _DataTypeCode(self, **vendor_datatype_codes):
         '''Return desired endianness for DevicePropDesc'''
@@ -626,10 +639,12 @@ class PTPDevice(object):
         self._DeviceInfo = self._DeviceInfo()
         self._SessionID = self._SessionID()
         self._TransactionID = self._TransactionID()
+        self._ObjectHandle = self._ObjectHandle()
         self._ResponseCode = self._ResponseCode()
         self._Event = self._Event()
         self._Response = self._Response()
         self._Operation = self._Operation()
+        self._StorageID = self._StorageID()
         self._StorageIDs = self._StorageIDs()
         self._StorageType = self._StorageType()
         self._FilesystemType = self._FilesystemType()
@@ -641,9 +656,6 @@ class PTPDevice(object):
         self._DataType = self._DataType()
         self._GetSet = self._GetSet()
         self._FormFlag = self._FormFlag()
-        # self._RangeForm = self._RangeForm()
-        # self._EnumerationForm = self._EnumerationForm()
-        # self._Form = self._Form()
         self._DevicePropDesc = self._DevicePropDesc()
 
     __session = 0

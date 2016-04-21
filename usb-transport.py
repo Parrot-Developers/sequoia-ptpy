@@ -287,6 +287,7 @@ class PTPUSB(PTPDevice):
         # Get response and sneak in implicit SessionID, Data and missing
         # parameters.
         transaction = self.__recv()
+        # TODO: refactor this to appear only in one place.
         payload = transaction.Payload
         response = self.__Param.parse(payload)
         response['SessionID'] = self.session_id

@@ -822,7 +822,7 @@ class PTPDevice(object):
         response = self.recv(ptp)
         return self.__parse_if_data(response, self._DevicePropDesc)
 
-    def get_device_property_value(self, device_property):
+    def get_device_prop_value(self, device_property):
         # TODO: Define DevicePropValue constructor.
         if isinstance(device_property, basestring):
             try:

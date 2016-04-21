@@ -863,6 +863,28 @@ class PTPDevice(object):
 
     # TODO: Add decorator to check there is an open session.
 
+    def reset_device_prop_value(self, device_property, reset_all=False):
+        '''Reset given device property to factory default.
+
+        If `reset_all` is `True`, the device_property can be `None`.
+        '''
+        if isinstance(device_property, basestring):
+            try:
+                code = self._PropertyCode.encoding[device_property]
+            except Exception:
+                raise PTPError('Unknown property name. Try with a number?')
+        else:
+            code = device_property
+
+        ptp = Container(
+            OperationCode='ResetDevice',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[0xffffffff if reset_all else code],
+        )
+        response = self.recv(ptp)
+        return response
+
     def get_device_info(self):
         ptp = Container(
             OperationCode='GetDeviceInfo',
@@ -1007,4 +1029,60 @@ class PTPDevice(object):
             ]
         )
         response = self.recv(ptp)
+        return response
+
+    def initiate_open_capture(self, storage_id=0, object_format=0):
+        '''Initiate open capture in `storage_id` of type `object_format`.'''
+        # TODO: accept format codes or names
+        ptp = Container(
+            OperationCode='InitiateOpenCapture',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[
+                storage_id,
+                object_format,
+            ]
+        )
+        response = self.recv(ptp)
+        return response
+
+    def terminate_open_capture(self, transaction_id):
+        '''Terminate the open capture initiated in `transaction_id`'''
+        ptp = Container(
+            OperationCode='TerminateOpenCapture',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[
+                transaction_id,
+            ]
+        )
+        response = self.recv(ptp)
+        return response
+
+    def get_object_info(self, handle):
+        '''Get ObjectInfo dataset for given handle.'''
+        ptp = Container(
+            OperationCode='GetObjectInfo',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[handle]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._ObjectInfo)
+
+    def send_object(self, bytes_data):
+        '''Send object to responder.
+
+        The object should correspond to the latest SendObjectInfo interaction
+        between Initiator and Responder.
+        '''
+        ptp = Container(
+            OperationCode='SendObject',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.send(ptp, bytes_data)
+        if response.ResponseCode != 'OK':
+            response = self.send(ptp, bytes_data)
         return response

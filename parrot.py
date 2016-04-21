@@ -79,7 +79,7 @@ class PTPDevice(ptp.PTPDevice):
         )
 
     def _FilesystemType(self, **product_filesystem_types):
-        return ptp.PTPDevice._ResponseCode(
+        return ptp.PTPDevice._FilesystemType(
             self,
             **product_filesystem_types
         )

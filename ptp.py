@@ -807,7 +807,7 @@ class PTPDevice(object):
     def __parse_if_data(self, response, constructor):
         '''If the response contains data, parse it with constructor.'''
         return (constructor.parse(response.Data)
-                if hasattr(response, 'Data') else response)
+                if hasattr(response, 'Data') else None)
 
     def open_session(self):
         self.__session += 1

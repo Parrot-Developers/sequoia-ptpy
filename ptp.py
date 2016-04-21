@@ -620,6 +620,64 @@ class PTPDevice(object):
             self._Form(self._DataType),
         )
 
+    def _ProtectionStatus(self):
+        return Enum(
+            self._UInt8('ProtectionStatus'),
+            _default_=Pass,
+            NoProtection=0x00,
+            ReadOnly=0x01,
+        )
+
+    def _AssociationType(self, **vendor_associations):
+        return Enum(
+            self._UInt8('ProtectionStatus'),
+            _default_=Pass,
+            Undefined=0x00,
+            GenericFolder=0x01,
+            Album=0x02,
+            TimeSequence=0x03,
+            HorizontalPanoramic=0x04,
+            VerticalPanoramic=0x05,
+            Panoramic2D=0x06,
+            AncillaryData=0x07,
+            **vendor_associations
+        )
+
+    def _AssociationDesc(self, **vendor_associations):
+        return Enum(
+            self._UInt8('ProtectionStatus'),
+            _default_=Pass,
+            Undefined=0x00,
+            DefaultPlaybackData=0x03,
+            ImagesPerRow=0x06,
+            **vendor_associations
+        )
+
+    def _ObjectInfo(self):
+        '''Return desired endianness for ObjectInfo'''
+        return Struct(
+            'ObjectInfo',
+            self._StorageID,
+            Rename('ObjectFormat', self._ObjectFormatCode),
+            self._ProtectionStatus,
+            self._UInt32('ObjectCompressedSize'),
+            Rename('ThumbFormat', self._ObjectFormatCode),
+            self._UInt32('ThumbCompressedSize'),
+            self._UInt32('ThumbPixWidth'),
+            self._UInt32('ThumbPixHeight'),
+            self._UInt32('ImagePixWidth'),
+            self._UInt32('ImagePixHeight'),
+            self._UInt32('ImageBitDepth'),
+            Rename('ParentObject', self._ObjectHandle),
+            self._AssociationType,
+            self._AssociationDesc,
+            self._UInt32('SequenceNumber'),
+            self._String('Filename'),
+            Rename('CaptureDate', self._DateTime),
+            Rename('ModificationDate', self._DateTime),
+            self._String('Keywords'),
+        )
+
     def _set_endian(self, little=False, big=False):
         '''Instantiate constructors to given endianness'''
         # All constructors need to be instantiated before use by setting their

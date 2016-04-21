@@ -726,6 +726,11 @@ class PTPDevice(object):
             if self.__session_open:
                 self.close_session()
 
+    def __parse_if_data(self, response, constructor):
+        '''If the response contains data, parse it with constructor.'''
+        return (constructor.parse(response.Data)
+                if hasattr(response, 'Data') else response)
+
     def open_session(self):
         self.__session += 1
         self.__transaction = 0
@@ -762,7 +767,7 @@ class PTPDevice(object):
             Parameter=[0, 0, 0, 0, 0]
         )
         response = self.recv(ptp)
-        return self._DeviceInfo.parse(response.Data)
+        return self.__parse_if_data(response, self._DeviceInfo)
 
     def get_storage_ids(self):
         ptp = Container(
@@ -772,7 +777,7 @@ class PTPDevice(object):
             Parameter=[0, 0, 0, 0, 0]
         )
         response = self.recv(ptp)
-        return self._StorageIDs.parse(response.Data)
+        return self.__parse_if_data(response, self._StorageIDs)
 
     def get_storage_info(self, storage_id):
         ptp = Container(
@@ -782,7 +787,18 @@ class PTPDevice(object):
             Parameter=[storage_id]
         )
         response = self.recv(ptp)
-        return self._StorageInfo.parse(response.Data)
+        return self.__parse_if_data(response, self._StorageInfo)
+
+    def get_num_objects(self, storage_id, object_format=0, object_handle=0):
+        # TODO: accept object_format code or its name.
+        ptp = Container(
+            OperationCode='GetNumObjects',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[storage_id, object_format, object_handle]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._StorageInfo)
 
     def get_device_prop_desc(self, device_property):
         '''Retrieve the property description.
@@ -804,7 +820,7 @@ class PTPDevice(object):
             Parameter=[code, 0, 0, 0, 0]
         )
         response = self.recv(ptp)
-        return self._DevicePropDesc.parse(response.Data)
+        return self.__parse_if_data(response, self._DevicePropDesc)
 
     def get_device_property_value(self, device_property):
         # TODO: Define DevicePropValue constructor.
@@ -822,4 +838,5 @@ class PTPDevice(object):
             Parameter=[code, 0, 0, 0, 0]
         )
         response = self.recv(ptp)
-        return self._DevicePropValue.parse(response.Data)
+        return response
+        # return self.__parse_if_data(response, self._DevicePropValue)

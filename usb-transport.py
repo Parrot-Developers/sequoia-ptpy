@@ -345,17 +345,17 @@ if __name__ == "__main__":
     for dev in devs:
         camera = PTPUSB(dev)
         device_info = camera.get_device_info()
-        print device_info
         with camera.session():
+            device_info = camera.get_device_info()
+
             for prop in device_info.DevicePropertiesSupported:
-                prop_desc = camera.get_device_prop_desc(prop)
-                if prop_desc:
-                    print prop_desc
-        handles = camera.get_object_handles(
-            None,
-            all_storage_ids=True,
-            all_formats=True
-        )
-        if handles:
+                print camera.get_device_prop_desc(prop)
+
+            handles = camera.get_object_handles(
+                None,
+                all_formats=True,
+                all_storage_ids=True
+            )
+
             for handle in handles:
                 print camera.get_object_info(handle)

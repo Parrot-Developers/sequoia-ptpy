@@ -1083,3 +1083,32 @@ class PTPDevice(object):
         if response.ResponseCode != 'OK':
             response = self.send(ptp, bytes_data)
         return response
+
+    def delete_object(
+            self,
+            handle,
+            object_format=0,
+            delete_all=False,
+            delete_all_images=False
+    ):
+        '''Delete object for given handle.
+
+        Optionally delete all objects or all images.
+        '''
+        code = self.__code(object_format, self._ObjectFormatCode)
+
+        # Do the most destruction:
+        if delete_all and delete_all_images:
+            delete_all_images = False
+
+        ptp = Container(
+            OperationCode='DeleteObject',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[
+                0xFFFFFFFF if delete_all else handle,
+                code,
+            ]
+        )
+
+        return self.mesg(ptp)

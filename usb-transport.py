@@ -204,13 +204,14 @@ class PTPUSB(PTPDevice):
 
     def __recv(self):
         '''Helper method for receiving non-event data.'''
-        usbdata = self.__inep.read(
-            self.__inep.wMaxPacketSize,
-        )
-        header = self.__ResponseHeader.parse(
-            usbdata[0:self.__Header.sizeof()]
-        )
-
+        try:
+            usbdata = self.__inep.read(2*(10**6), timeout=1)
+        except usb.core.USBError as e:
+            # Ignore timeout once.
+            if e.errno == 110:
+                usbdata = self.__inep.read(2*(10**6), timeout=5000)
+            else:
+                raise e
         header = self.__ResponseHeader.parse(usbdata[0:self.__Header.sizeof()])
         command = self.__CommandHeader.parse(usbdata[0:self.__Header.sizeof()])
         if header.Type not in ['Response', 'Data']:
@@ -219,8 +220,8 @@ class PTPUSB(PTPDevice):
                 'Expected Response or Data but reveived {}'.format(header.Type)
             )
         while len(usbdata) < header.Length:
-            # TODO: Fix case where small packets indicate end of transfer.
-            usbdata += self.__inep.read(self.__inep.wMaxPacketSize)
+            # TODO: fix case when data is larger than max USB packet size
+            usbdata += self.__inep.read(2*(10**6))
 
         # Build up container with all PTP info.
         transaction = self.__ResponseTransaction.parse(usbdata)

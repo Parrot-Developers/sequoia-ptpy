@@ -333,7 +333,8 @@ class PTPUSB(PTPDevice):
                 'Expected Event but reveived {}'.format(transaction.Type)
             )
         payload = transaction.Payload
-        event = self.__Param.parse(payload)
+        event = Container()
+        event['Parameter'] = self.__Param.parse(payload)
         event['SessionID'] = self.session_id
         event['TransactionID'] = transaction.TransactionID
         event['EventCode'] = transaction.EventCode

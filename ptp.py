@@ -924,18 +924,18 @@ class PTPDevice(object):
             in_root=False,
     ):
         '''Total number of objects present in `storage_id`'''
-        # TODO: accept object_format code or its name.
         if object_handle != 0 and in_root and object_handle != 0xffffffff:
             raise ValueError(
                 'Cannot get both root and {}'.format(object_handle)
             )
+        code = self.__code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='GetNumObjects',
             SessionID=self.__session,
             TransactionID=self.__transaction,
             Parameter=[
                 0xffffffff if all_storage_ids else storage_id,
-                0xffffffff if all_formats else object_format,
+                0xffffffff if all_formats else code,
                 0xffffffff if in_root else object_handle
             ]
         )
@@ -972,18 +972,24 @@ class PTPDevice(object):
             self._PTPArray('ObjectHandles', self._ObjectHandle)
         )
 
+    def __code(self, name_or_code, constructor):
+        '''Helper method to get the code for an Enum constructor.'''
+        if isinstance(name_or_code, basestring):
+            try:
+                code = constructor.encoding[name_or_code]
+            except Exception:
+                raise PTPError('Unknown property name. Try with a number?')
+        else:
+            code = name_or_code
+
+        return code
+
     def get_device_prop_desc(self, device_property):
         '''Retrieve the property description.
 
         Accepts a property name of a number.
         '''
-        if isinstance(device_property, basestring):
-            try:
-                code = self._PropertyCode.encoding[device_property]
-            except Exception:
-                raise PTPError('Unknown property name. Try with a number?')
-        else:
-            code = device_property
+        code = self.__code(device_property, self._PropertyCode)
 
         ptp = Container(
             OperationCode='GetDevicePropDesc',
@@ -995,14 +1001,7 @@ class PTPDevice(object):
         return self.__parse_if_data(response, self._DevicePropDesc)
 
     def get_device_prop_value(self, device_property):
-        # TODO: Define DevicePropValue constructor.
-        if isinstance(device_property, basestring):
-            try:
-                code = self._PropertyCode.encoding[device_property]
-            except Exception:
-                raise PTPError('Unknown property name. Try with a number?')
-        else:
-            code = device_property
+        code = self.__code(device_property, self._PropertyCode)
 
         ptp = Container(
             OperationCode='GetDevicePropValue',
@@ -1016,14 +1015,14 @@ class PTPDevice(object):
 
     def initiate_capture(self, storage_id=0, object_format=0):
         '''Initiate capture with current camera settings.'''
-        # TODO: accept format codes or names
+        code = self.__code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='InitiateCapture',
             SessionID=self.__session,
             TransactionID=self.__transaction,
             Parameter=[
                 storage_id,
-                object_format,
+                code,
             ]
         )
         response = self.recv(ptp)
@@ -1031,14 +1030,14 @@ class PTPDevice(object):
 
     def initiate_open_capture(self, storage_id=0, object_format=0):
         '''Initiate open capture in `storage_id` of type `object_format`.'''
-        # TODO: accept format codes or names
+        code = self.__code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='InitiateOpenCapture',
             SessionID=self.__session,
             TransactionID=self.__transaction,
             Parameter=[
                 storage_id,
-                object_format,
+                code,
             ]
         )
         response = self.recv(ptp)

@@ -399,7 +399,7 @@ class PTPDevice(object):
             Fuji=0x0000000E,
             Sony=0x00000011,  # Self-imposed.
             Samsung=0x0000001A,
-            Parrot=0x00000026,  # Self-imposed.
+            Parrot=0x0000001B,
             _default_=Pass,
         )
 

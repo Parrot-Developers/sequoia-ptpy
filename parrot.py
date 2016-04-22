@@ -11,6 +11,7 @@ extension:
     # Here PTPDevice can now be instantiated over transport
 '''
 import ptp
+from construct import Container, Pass, Enum, BitStruct, Flag, Padding
 
 __all__ = ('PTPDevice',)
 
@@ -83,3 +84,223 @@ class PTPDevice(ptp.PTPDevice):
             self,
             **product_filesystem_types
         )
+
+    # TODO: Nicer decoding of fixed length arrays.
+    def _Sunshine(self):
+        return self._PTPArray('Sunshine', self._UInt32('Int'))
+
+    def _Temperature(self):
+        return self._PTPArray('Temperature', self._UInt32('Int'))
+
+    def _Angle(self):
+        return self._PTPArray('Angle', self._UInt32('Int'))
+
+    def _GPS(self):
+        return self._PTPArray('GPS', self._UInt32('Int'))
+
+    def _Gyroscope(self):
+        return self._PTPArray('Gyroscope', self._UInt32('Int'))
+
+    def _Accelerometer(self):
+        return self._PTPArray('Accelerometer', self._UInt32('Int'))
+
+    def _Magnetometer(self):
+        return self._PTPArray('Magnetometer', self._UInt32('Int'))
+
+    def _IMU(self):
+        return self._PTPArray('IMU', self._UInt32('Int'))
+
+    def _Status(self):
+        return BitStruct(
+            'Status',
+            Flag('CameraRunning'),
+            Flag('MainImuCalibRunning'),
+            Flag('AuxiliaryImuCalibRunning'),
+            Flag('AuxiliaryConnected'),
+            Flag('GpsRunning'),
+            Flag('RemoteGpsRunning'),
+            Flag('CamNumber01Error'),
+            Flag('CamNumber02Error'),
+            Flag('CamNumber03Error'),
+            Flag('CamNumber04Error'),
+            Flag('CamNumber05Error'),
+            Flag('CamNumber06Error'),
+            Flag('CamNumber07Error'),
+            Flag('CamNumber08Error'),
+            Flag('CamNumber09Error'),
+            Flag('CamNumber10Error'),
+            Flag('CamNumber11Error'),
+            Flag('CamNumber12Error'),
+            Flag('CamNumber13Error'),
+            Flag('CamNumber14Error'),
+            Flag('CamNumber15Error'),
+            Flag('CamNumber16Error'),
+            # If new flags are defined, the padding should be asjusted.
+            Padding(10),
+        )
+
+    def _MagnetoStatus(self):
+        return Enum(
+            self._UInt32('MagnetoStatus'),
+            CalibrationOk=1,
+            CalibrationRunning=2,
+            CalibrationRollPending=3,
+            CalibrationPitchPending=4,
+            CalibrationYawPending=5,
+            CalibrationFailed=6,
+            CalibrationAborted=7,
+            _default_=Pass,
+        )
+
+    def _set_endian(self, little=False, big=False):
+        ptp.PTPDevice._set_endian(
+            self,
+            little=False,
+            big=False
+        )
+        self._Sunshine = self._Sunshine()
+        self._Temperature = self._Temperature()
+        self._Angle = self._Angle()
+        self._GPS = self._GPS()
+        self._Gyroscope = self._Gyroscope()
+        self._Accelerometer = self._Accelerometer()
+        self._Magnetometer = self._Magnetometer()
+        self._IMU = self._IMU()
+        self._Status = self._Status()
+        self._MagnetoStatus = self._MagnetoStatus()
+
+    def get_sunshine_values(self):
+        ptp = Container(
+            OperationCode='GetSunshineValues',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._Sunshine)
+
+    def get_temperature_values(self):
+        ptp = Container(
+            OperationCode='GetTemperatureValues',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._Temperature)
+
+    def get_angle_values(self, imu_id=0):
+        ptp = Container(
+            OperationCode='GetAngleValues',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[imu_id]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._Angle)
+
+    def get_gps_values(self):
+        ptp = Container(
+            OperationCode='GetGpsValues',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._GPS)
+
+    def get_gyroscope_values(self, imu_id=0):
+        ptp = Container(
+            OperationCode='GetGyroscopeValues',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[imu_id]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._Gyroscope)
+
+    def get_accelerometer_values(self, imu_id=0):
+        ptp = Container(
+            OperationCode='GetAccelerometerValues',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[imu_id]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._Accelerometer)
+
+    def get_magnetometer_values(self, imu_id=0):
+        ptp = Container(
+            OperationCode='GetMagnetometerValues',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[imu_id]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._Magnetometer)
+
+    def get_imu_values(self, imu_id=0):
+        ptp = Container(
+            OperationCode='GetImuValues',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[imu_id]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._IMU)
+
+    def get_status_mask(self, imu_id=0):
+        ptp = Container(
+            OperationCode='GetStatusMask',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[imu_id]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._Status)
+
+    def eject_storage(self, storage_id):
+        ptp = Container(
+            OperationCode='EjectStorage',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[storage_id]
+        )
+        return self.mesg(ptp)
+
+    def start_magneto_calib(self, imu_id=0):
+        ptp = Container(
+            OperationCode='StartMagnetoCalib',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[imu_id]
+        )
+        return self.mesg(ptp)
+
+    def stop_magneto_calib(self, imu_id=0):
+        ptp = Container(
+            OperationCode='StopMagnetoCalib',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[imu_id]
+        )
+        return self.mesg(ptp)
+
+    def get_magneto_calib_status(self, imu_id=0):
+        ptp = Container(
+            OperationCode='MagnetoCalibStatus',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[imu_id]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(response, self._MagnetoStatus)
+
+    def send_firmware(self, firmware):
+        ptp = Container(
+            OperationCode='MagnetoCalibStatus',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        return self.send(ptp, firmware)

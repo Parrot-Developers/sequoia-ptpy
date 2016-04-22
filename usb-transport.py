@@ -240,7 +240,12 @@ class PTPUSB(PTPDevice):
     def __send(self, ptp_container):
         '''Helper method for sending data.'''
         transaction = self.__CommandTransaction.build(ptp_container)
-        self.__outep.write(transaction)
+        try:
+            self.__outep.write(transaction, timeout=1)
+        except usb.core.USBError as e:
+            # Ignore timeout once
+            if e.errno == 110:
+                self.__outep.write(transaction, timeout=5000)
 
     def __send_request(self, ptp_container):
         '''Send PTP request without checking answer.'''

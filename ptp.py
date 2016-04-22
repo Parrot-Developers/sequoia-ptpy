@@ -103,7 +103,7 @@ class PTPDevice(object):
             lambda name: BitField(name, 128, signed=True)
         )
 
-    def _Parameter(self, _le_=False, _be_=False):
+    def _Parameter(self):
         '''Return desired endianness for Parameter'''
         return self._UInt32('Parameter')
 
@@ -119,10 +119,10 @@ class PTPDevice(object):
         '''Return desired endianness for ObjectHandle'''
         return self._UInt32('ObjectHandle')
 
-    def _DateTime(self):
+    def _DateTime(self, name):
         '''Return desired endianness for DateTime'''
         return ExprAdapter(
-            self._PTPString('DateTime'),
+            self._PTPString(name),
             encoder=lambda obj, ctx:
                 # TODO: Support timezone encoding.
                 datetime.strftime(obj, '%Y%m%dT%H%M%S.%f')[:-5],
@@ -572,7 +572,7 @@ class PTPDevice(object):
             _default_=Pass,
             NoForm=0x00,
             Range=0x01,
-            Enumeration=0x01,
+            Enumeration=0x02,
         )
 
     def _RangeForm(self, element):
@@ -586,12 +586,10 @@ class PTPDevice(object):
         )
 
     def _EnumerationForm(self, element):
-        return Embedded(
-            PrefixedArray(
-                Rename('SupportedValues', element),
-                length_field=self._UInt16('NumberOfValues'),
-            )
-        )
+        return Struct('Enumeration', PrefixedArray(
+            Rename('Enumeration', element),
+            length_field=self._UInt16('length'),
+        ))
 
     def _Form(self, element):
         return Switch(
@@ -626,7 +624,7 @@ class PTPDevice(object):
 
     def _AssociationType(self, **vendor_associations):
         return Enum(
-            self._UInt8('ProtectionStatus'),
+            self._UInt8('AssociationType'),
             _default_=Pass,
             Undefined=0x00,
             GenericFolder=0x01,
@@ -641,7 +639,7 @@ class PTPDevice(object):
 
     def _AssociationDesc(self, **vendor_associations):
         return Enum(
-            self._UInt8('ProtectionStatus'),
+            self._UInt8('AssociationDesc'),
             _default_=Pass,
             Undefined=0x00,
             DefaultPlaybackData=0x03,
@@ -668,10 +666,10 @@ class PTPDevice(object):
             self._AssociationType,
             self._AssociationDesc,
             self._UInt32('SequenceNumber'),
-            self._String('Filename'),
-            Rename('CaptureDate', self._DateTime),
-            Rename('ModificationDate', self._DateTime),
-            self._String('Keywords'),
+            self._PTPString('Filename'),
+            self._DateTime('CaptureDate'),
+            self._DateTime('ModificationDate'),
+            self._PTPString('Keywords'),
         )
 
     def _set_endian(self, little=False, big=False):
@@ -690,9 +688,9 @@ class PTPDevice(object):
         self._Int32 = self._Int32(_le_=little, _be_=big)
         self._Int64 = self._Int64(_le_=little, _be_=big)
         self._Int128 = self._Int128(_le_=little, _be_=big)
-        self._Parameter = self._Parameter(_le_=little, _be_=big)
 
         # Implicit instantiation. Needs to happen after the above.
+        self._Parameter = self._Parameter()
         self._VendorExtensionID = self._VendorExtensionID()
         self._OperationCode = self._OperationCode()
         self._EventCode = self._EventCode()
@@ -712,13 +710,16 @@ class PTPDevice(object):
         self._FilesystemType = self._FilesystemType()
         self._AccessCapability = self._AccessCapability()
         self._StorageInfo = self._StorageInfo()
-
-        # TODO: Implement pertinent types and then instantiate.
         self._DataTypeCode = self._DataTypeCode()
         self._DataType = self._DataType()
         self._GetSet = self._GetSet()
         self._FormFlag = self._FormFlag()
         self._DevicePropDesc = self._DevicePropDesc()
+
+        self._AssociationType = self._AssociationType()
+        self._AssociationDesc = self._AssociationDesc()
+        self._ProtectionStatus = self._ProtectionStatus()
+        self._ObjectInfo = self._ObjectInfo()
 
     __session = 0
     __session_open = False
@@ -976,7 +977,6 @@ class PTPDevice(object):
 
         Accepts a property name of a number.
         '''
-        # TODO: Define DevicePropDesc constructor.
         if isinstance(device_property, basestring):
             try:
                 code = self._PropertyCode.encoding[device_property]

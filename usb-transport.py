@@ -156,7 +156,7 @@ class PTPUSB(PTPDevice):
         # Apparently nobody uses the SessionID field. Even though it is
         # specified in ISO15740:2013(E), no device respects it and the session
         # number is implicit over USB.
-        self.__Param = Struct('Parameter', Range(0, 5, self._Parameter))
+        self.__Param = Range(0, 5, self._Parameter)
         self.__FullParam = Struct('Parameter', Array(5, self._Parameter))
         self.__FullEventParam = Struct('Parameter', Array(3, self._Parameter))
         self.__CommandTransactionBase = Struct(
@@ -230,9 +230,8 @@ class PTPUSB(PTPDevice):
             TransactionID=transaction.TransactionID,
         )
         if transaction.Type == 'Response':
-            param = self.__Param.parse(transaction.Payload)
             response['ResponseCode'] = transaction.ResponseCode
-            response['Parameter'] = param.Parameter
+            response['Parameter'] = self.__Param.parse(transaction.Payload)
         else:
             response['OperationCode'] = command.OperationCode
             response['Data'] = transaction.Payload
@@ -259,7 +258,7 @@ class PTPUSB(PTPDevice):
 
         # Send request
         ptp['Type'] = 'Command'
-        ptp['Payload'] = self.__Param.build(ptp)
+        ptp['Payload'] = self.__Param.build(ptp.Parameter)
         self.__send(ptp)
 
     def __send_data(self, ptp_container, data):

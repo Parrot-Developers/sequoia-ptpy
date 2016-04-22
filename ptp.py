@@ -71,6 +71,7 @@ class PTPDevice(object):
         return switch_endian(_le_, _be_, ULInt64, UBInt64, UNInt64)
 
     def _UInt128(self, _le_=False, _be_=False):
+        # TODO: This expression is incorrect. Should be encased in BitStruct
         return switch_endian(
             _le_,
             _be_,
@@ -93,6 +94,7 @@ class PTPDevice(object):
 
     def _Int128(self, _le_=False, _be_=False):
         '''Return desired endianness for Parameter'''
+        # TODO: This expression is incorrect. Should be encased in BitStruct
         return switch_endian(
             _le_,
             _be_,
@@ -103,13 +105,7 @@ class PTPDevice(object):
 
     def _Parameter(self, _le_=False, _be_=False):
         '''Return desired endianness for Parameter'''
-        return switch_endian(
-            _le_,
-            _be_,
-            BitField('Parameter', 32, swapped=True),
-            BitField('Parameter', 32, swapped=False),
-            BitField('Parameter', 32)
-        )
+        return self._UInt32('Parameter')
 
     def _SessionID(self):
         '''Return desired endianness for SessionID'''

@@ -1269,3 +1269,5 @@ class PTPDevice(object):
         return self.__parse_if_data(
             response,
             self._DeviceInfo)
+
+    # TODO: Implement automatic event management.

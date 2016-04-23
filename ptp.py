@@ -1029,6 +1029,7 @@ class PTPDevice(object):
         )
         response = self.recv(ptp)
         return response
+        # TODO: Parse property automatically after a get_device_prop_desc
         # return self.__parse_if_data(response, self._DevicePropValue)
 
     def initiate_capture(self, storage_id=0, object_format=0):

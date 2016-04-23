@@ -670,6 +670,24 @@ class PTPDevice(object):
             self._PTPString('Keywords'),
         )
 
+    def _VendorExtensionMap(self):
+        '''Return desired endianness for VendorExtensionMap'''
+        # TODO: Integrate vendor extensions and their Enums to parse Native
+        # codes to their name.
+        return Struct(
+            'VendorExtensionMap',
+            self._UInt16('NativeCode'),
+            self._UInt16('MappedCode'),
+            Rename('MappedVendorExtensionID', self._VendorExtensionID),
+        )
+
+    def _VendorExtensionMapArray(self):
+        '''Return desired endianness for VendorExtensionMapArray'''
+        return PrefixedArray(
+            self._VendorExtensionMap,
+            length_field=self._UInt64('NumberElements'),
+        )
+
     def _set_endian(self, little=False, big=False):
         '''Instantiate constructors to given endianness'''
         # All constructors need to be instantiated before use by setting their
@@ -713,6 +731,8 @@ class PTPDevice(object):
         self._GetSet = self._GetSet()
         self._FormFlag = self._FormFlag()
         self._DevicePropDesc = self._DevicePropDesc()
+        self._VendorExtensionMap = self._VendorExtensionMap()
+        self._VendorExtensionMapArray = self._VendorExtensionMapArray()
 
         self._AssociationType = self._AssociationType()
         self._AssociationDesc = self._AssociationDesc()
@@ -1082,6 +1102,40 @@ class PTPDevice(object):
             response = self.send(ptp, bytes_data)
         return response
 
+    def get_object(self, handle):
+        '''Retrieve object from responder.
+
+        The object should correspond to a previous GetObjectInfo interaction
+        between Initiator and Responder in the same session.
+        '''
+        ptp = Container(
+            OperationCode='GetObject',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[handle]
+        )
+        return self.recv(ptp)
+
+    def get_partial_object(self, handle, offset, max_bytes, until_end=False):
+        '''Retrieve partial object from responder.
+
+        The object should correspond to a previous GetObjectInfo interaction
+        between Initiator and Responder in the same session.
+        Size fields represent maximum size as opposed to the actual size.
+
+        The first response parameter represents the actual number of bytes sent
+        by responder.
+        '''
+        ptp = Container(
+            OperationCode='GetPartialObject',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[handle,
+                       offset,
+                       0xFFFFFFFF if until_end else max_bytes]
+        )
+        return self.recv(ptp)
+
     def delete_object(
             self,
             handle,
@@ -1110,3 +1164,108 @@ class PTPDevice(object):
         )
 
         return self.mesg(ptp)
+
+    def move_object(
+            self,
+            handle,
+            storage_id=0,
+            parent_handle=0,
+    ):
+        '''Move object to parent.
+
+        Parent should be an Association. Default parent is the root directory
+        of `storage_id`
+        '''
+        ptp = Container(
+            OperationCode='MoveObject',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[
+                handle,
+                storage_id,
+                parent_handle,
+            ]
+        )
+
+        return self.mesg(ptp)
+
+    def copy_object(
+            self,
+            handle,
+            storage_id=0,
+            parent_handle=0,
+    ):
+        '''Copy object to parent.
+
+        Parent should be an Association. Default parent is the root directory
+        of `storage_id`
+        '''
+        ptp = Container(
+            OperationCode='CopyObject',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[
+                handle,
+                storage_id,
+                parent_handle,
+            ]
+        )
+
+        return self.mesg(ptp)
+
+    def get_thumb(self, handle):
+        '''Retrieve thumbnail for object from responder.
+        '''
+        ptp = Container(
+            OperationCode='GetThumb',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[handle]
+        )
+        return self.recv(ptp)
+
+    def get_resized_image_object(self, handle, width, height=0):
+        '''Retrieve resized image object from responder.
+
+        The object should correspond to a previous GetObjectInfo interaction
+        between Initiator and Responder in the same session.
+
+        If width is provided then the aspect ratio may change. The device may
+        not support this.
+        '''
+        ptp = Container(
+            OperationCode='GetResizedImageObject',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[handle, width, height]
+        )
+        return self.recv(ptp)
+
+    def get_vendor_extension_maps(self, handle):
+        '''Get VendorExtension maps when supporting more than one extension.
+        '''
+        ptp = Container(
+            OperationCode='GetVendorExtensionMaps',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(
+            response,
+            self._VendorExtensionMapArray)
+
+    def get_vendor_device_info(self, extension):
+        '''Get VendorExtension maps when supporting more than one extension.
+        '''
+        code = self.__code(extension, self._VendorExtensionID)
+        ptp = Container(
+            OperationCode='GetVendorDeviceInfo',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[code]
+        )
+        response = self.recv(ptp)
+        return self.__parse_if_data(
+            response,
+            self._DeviceInfo)

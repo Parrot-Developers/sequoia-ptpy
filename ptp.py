@@ -377,8 +377,6 @@ class PTPDevice(object):
     def _VendorExtensionID(self):
         return Enum(
             self._UInt32('VendorExtensionID'),
-            # It seems imaging.org has stopped responding to registry requests
-            # and vendors are now just imposing their own...
             EastmanKodak=0x00000001,
             SeikoEpson=0x00000002,
             Agilent=0x00000003,

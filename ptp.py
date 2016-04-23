@@ -616,34 +616,34 @@ class PTPDevice(object):
 
     def _ProtectionStatus(self):
         return Enum(
-            self._UInt8('ProtectionStatus'),
+            self._UInt16('ProtectionStatus'),
             _default_=Pass,
-            NoProtection=0x00,
-            ReadOnly=0x01,
+            NoProtection=0x0000,
+            ReadOnly=0x0001,
         )
 
     def _AssociationType(self, **vendor_associations):
         return Enum(
-            self._UInt8('AssociationType'),
+            self._UInt16('AssociationType'),
             _default_=Pass,
-            Undefined=0x00,
-            GenericFolder=0x01,
-            Album=0x02,
-            TimeSequence=0x03,
-            HorizontalPanoramic=0x04,
-            VerticalPanoramic=0x05,
-            Panoramic2D=0x06,
-            AncillaryData=0x07,
+            Undefined=0x0000,
+            GenericFolder=0x0001,
+            Album=0x0002,
+            TimeSequence=0x0003,
+            HorizontalPanoramic=0x0004,
+            VerticalPanoramic=0x0005,
+            Panoramic2D=0x0006,
+            AncillaryData=0x0007,
             **vendor_associations
         )
 
     def _AssociationDesc(self, **vendor_associations):
         return Enum(
-            self._UInt8('AssociationDesc'),
+            self._UInt32('AssociationDesc'),
             _default_=Pass,
-            Undefined=0x00,
-            DefaultPlaybackData=0x03,
-            ImagesPerRow=0x06,
+            Undefined=0x00000000,
+            DefaultPlaybackData=0x00000003,
+            ImagesPerRow=0x00000006,
             **vendor_associations
         )
 

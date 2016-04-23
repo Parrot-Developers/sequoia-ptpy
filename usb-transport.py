@@ -360,3 +360,4 @@ if __name__ == "__main__":
 
             for handle in handles:
                 print camera.get_object_info(handle)
+                print camera.get_thumb(handle)

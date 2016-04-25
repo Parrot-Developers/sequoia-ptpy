@@ -6,14 +6,14 @@ support more operations.
 '''
 import usb.core
 from usb.util import (
-        endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK,
-        ENDPOINT_TYPE_INTR, ENDPOINT_OUT, ENDPOINT_IN
-        )
+    endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK, ENDPOINT_TYPE_INTR,
+    ENDPOINT_OUT, ENDPOINT_IN,
+)
 from ptp import PTPError
 from parrot import PTPDevice
 from construct import (
-    Container, Array, ULInt32, ULInt16, Struct, Bytes, ExprAdapter, Embedded,
-    Enum, Range
+    Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
+    ULInt16, ULInt32,
 )
 
 __all__ = ('PTPUSB', 'find_usb_cameras')
@@ -224,7 +224,6 @@ class PTPUSB(PTPDevice):
                 'Expected Response or Data but reveived {}'.format(header.Type)
             )
         while len(usbdata) < header.Length:
-            # TODO: fix case when data is larger than max USB packet size
             usbdata += self.__inep.read(
                 self.__inep.wMaxPacketSize,
                 timeout=5000
@@ -339,7 +338,7 @@ class PTPUSB(PTPDevice):
         if transaction.Type != 'Event':
             raise PTPError(
                 'Unexpected USB transfer type.'
-                'Expected Event but reveived {}'.format(transaction.Type)
+                'Expected Event but received {}'.format(transaction.Type)
             )
         payload = transaction.Payload
         event = Container()

@@ -892,7 +892,7 @@ class PTPDevice(object):
             code = device_property
 
         ptp = Container(
-            OperationCode='ResetDevice',
+            OperationCode='ResetDevicePropValue',
             SessionID=self.__session,
             TransactionID=self.__transaction,
             Parameter=[0xffffffff if reset_all else code],

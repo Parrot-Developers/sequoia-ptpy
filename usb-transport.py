@@ -48,7 +48,6 @@ def find_usb_cameras():
 
 class PTPUSB(PTPDevice):
     '''Implement bare PTP Device with USB transport.'''
-
     def __init__(self, dev=None):
         '''Instantiate the first available PTP device over USB'''
         self.__setup_constructors()
@@ -73,6 +72,8 @@ class PTPUSB(PTPDevice):
                         )
                 usb.util.claim_interface(self.__dev, self.__intf)
 
+    # Helper methods.
+    # ---------------------
     def __setup_device(self, dev):
         '''Get endpoints for a device. True on success.'''
         self.__inep = None
@@ -281,6 +282,8 @@ class PTPUSB(PTPDevice):
         ptp['Payload'] = data
         self.__send(ptp)
 
+    # Actual implementation
+    # ---------------------
     def send(self, ptp_container, data):
         '''Transfer operation with dataphase from initiator to responder'''
         self.__send_request(ptp_container)

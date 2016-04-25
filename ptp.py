@@ -11,12 +11,11 @@ and may need to be adapted to transport-endianness:
     SessionID(be=True)  # returns big endian constructor
 '''
 from construct import (
-    Container, Array, BitField, Embedded, Enum, ExprAdapter,
-    LengthValueAdapter, Pass, PrefixedArray, Rename, Sequence, Struct, Switch,
-    UBInt16, UBInt32, UBInt8, ULInt16, ULInt32, ULInt8, UNInt16, UNInt32,
-    UNInt8, UBInt64, ULInt64, UNInt64, SLInt8, SLInt16, SLInt32,
-    SLInt64, SBInt8, SBInt16, SBInt32, SBInt64, SNInt8, SNInt16, SNInt32,
-    SNInt64
+    Array, BitField, Container, Embedded, Enum, ExprAdapter,
+    LengthValueAdapter, Pass, PrefixedArray, Rename, SBInt16, SBInt32, SBInt64,
+    SBInt8, Sequence, SLInt16, SLInt32, SLInt64, SLInt8, SNInt16, SNInt32,
+    SNInt64, SNInt8, Struct, Switch, UBInt16, UBInt32, UBInt64, UBInt8,
+    ULInt16, ULInt32, ULInt64, ULInt8, UNInt16, UNInt32, UNInt64, UNInt8,
     )
 from contextlib import contextmanager
 from dateutil.parser import parse as iso8601
@@ -25,7 +24,6 @@ from datetime import datetime
 # Module specific
 # _______________
 __all__ = ('PTPError', 'PTPUnimplemented', 'PTPDevice',)
-
 __author__ = 'Luis Mario Domenzain'
 
 
@@ -55,7 +53,6 @@ def switch_endian(le, be, l, b, n):
 
 class PTPDevice(object):
     '''Implement bare PTP Device. Vendor specific devices should extend it.'''
-
     # Base PTP protocol transaction elements
     # --------------------------------------
     def _UInt8(self, _le_=False, _be_=False):
@@ -114,20 +111,6 @@ class PTPDevice(object):
     def _TransactionID(self):
         '''Return desired endianness for TransactionID'''
         return self._UInt32('TransactionID')
-
-    def _ObjectHandle(self):
-        '''Return desired endianness for ObjectHandle'''
-        return self._UInt32('ObjectHandle')
-
-    def _DateTime(self, name):
-        '''Return desired endianness for DateTime'''
-        return ExprAdapter(
-            self._PTPString(name),
-            encoder=lambda obj, ctx:
-                # TODO: Support timezone encoding.
-                datetime.strftime(obj, '%Y%m%dT%H%M%S.%f')[:-5],
-            decoder=lambda obj, ctx: iso8601(obj),
-        )
 
     def _OperationCode(self, **vendor_operations):
         '''Return desired endianness for known OperationCode'''
@@ -269,8 +252,6 @@ class PTPDevice(object):
             Array(5, self._Parameter),
         )
 
-    # PTP Datasets for specific operations
-    # ------------------------------------
     def _PropertyCode(self, **vendor_properties):
         '''Return desired endianness for known OperationCode'''
         return Enum(
@@ -311,29 +292,11 @@ class PTPDevice(object):
             **vendor_properties
         )
 
-    def _PTPString(self, name):
-        '''Returns a PTP String constructor'''
-        return ExprAdapter(
-            LengthValueAdapter(
-                Sequence(
-                    name,
-                    self._UInt8('NumChars'),
-                    Array(lambda ctx: ctx.NumChars, self._UInt16('Chars'))
-                )
-            ),
-            encoder=lambda obj, ctx:
-                [] if len(obj) == 0 else [ord(c) for c in unicode(obj)]+[0],
-            decoder=lambda obj, ctx:
-                u''.join(
-                [unichr(o) for o in obj]
-                ).split('\x00')[0],
-        )
-
-    def _PTPArray(self, name, element):
-        return PrefixedArray(
-            Rename(name, element),
-            length_field=self._UInt32('NumElements'),
-        )
+    # PTP Datasets for specific operations
+    # ------------------------------------
+    def _ObjectHandle(self):
+        '''Return desired endianness for ObjectHandle'''
+        return self._UInt32('ObjectHandle')
 
     def _ObjectFormatCode(self, **vendor_object_formats):
         '''Return desired endianness for known ObjectFormatCode'''
@@ -372,6 +335,40 @@ class PTPDevice(object):
             DNG=0x3811,
             _default_=Pass,
             **vendor_object_formats
+        )
+
+    def _DateTime(self, name):
+        '''Return desired endianness for DateTime'''
+        return ExprAdapter(
+            self._PTPString(name),
+            encoder=lambda obj, ctx:
+                # TODO: Support timezone encoding.
+                datetime.strftime(obj, '%Y%m%dT%H%M%S.%f')[:-5],
+            decoder=lambda obj, ctx: iso8601(obj),
+        )
+
+    def _PTPString(self, name):
+        '''Returns a PTP String constructor'''
+        return ExprAdapter(
+            LengthValueAdapter(
+                Sequence(
+                    name,
+                    self._UInt8('NumChars'),
+                    Array(lambda ctx: ctx.NumChars, self._UInt16('Chars'))
+                )
+            ),
+            encoder=lambda obj, ctx:
+                [] if len(obj) == 0 else [ord(c) for c in unicode(obj)]+[0],
+            decoder=lambda obj, ctx:
+                u''.join(
+                [unichr(o) for o in obj]
+                ).split('\x00')[0],
+        )
+
+    def _PTPArray(self, name, element):
+        return PrefixedArray(
+            Rename(name, element),
+            length_field=self._UInt32('NumElements'),
         )
 
     def _VendorExtensionID(self):
@@ -688,6 +685,8 @@ class PTPDevice(object):
             length_field=self._UInt64('NumberElements'),
         )
 
+    # Helper to concretize generic constructors to desired endianness
+    # ---------------------------------------------------------------
     def _set_endian(self, little=False, big=False):
         '''Instantiate constructors to given endianness'''
         # All constructors need to be instantiated before use by setting their
@@ -739,6 +738,8 @@ class PTPDevice(object):
         self._ProtectionStatus = self._ProtectionStatus()
         self._ObjectInfo = self._ObjectInfo()
 
+    # Session and transaction helpers
+    # -------------------------------
     __session = 0
     __session_open = False
     __transaction_id = 0
@@ -761,34 +762,6 @@ class PTPDevice(object):
             )
         else:
             self.__transaction_id = 0
-
-    def __init__(self):
-        raise PTPUnimplemented(
-            'Please implement PTP device setup for this transport.'
-        )
-
-    def send(self, ptp_container, payload):
-        '''Operation with dataphase from initiator to responder'''
-        raise PTPUnimplemented(
-            'Please implement a PTP dataphase send for this transport.'
-        )
-
-    def recv(self, ptp_container):
-        '''Operation with dataphase from responder to initiator'''
-        raise PTPUnimplemented(
-            'Please implement PTP dataphase receive for this transport.'
-        )
-
-    def mesg(self, ptp_container):
-        '''Operation with no dataphase'''
-        raise PTPUnimplemented(
-            'Please implement PTP no-dataphase command for this transport.'
-        )
-
-    def event(self, wait=False):
-        raise PTPUnimplemented(
-            'Please implement a PTP event for this transport.'
-        )
 
     @property
     def session_id(self):
@@ -819,11 +792,54 @@ class PTPDevice(object):
             if self.__session_open:
                 self.close_session()
 
+    # Transport-specific functions
+    # ----------------------------
+    def __init__(self):
+        raise PTPUnimplemented(
+            'Please implement PTP device setup for this transport.'
+        )
+
+    def send(self, ptp_container, payload):
+        '''Operation with dataphase from initiator to responder'''
+        raise PTPUnimplemented(
+            'Please implement a PTP dataphase send for this transport.'
+        )
+
+    def recv(self, ptp_container):
+        '''Operation with dataphase from responder to initiator'''
+        raise PTPUnimplemented(
+            'Please implement PTP dataphase receive for this transport.'
+        )
+
+    def mesg(self, ptp_container):
+        '''Operation with no dataphase'''
+        raise PTPUnimplemented(
+            'Please implement PTP no-dataphase command for this transport.'
+        )
+
+    def event(self, wait=False):
+        raise PTPUnimplemented(
+            'Please implement a PTP event for this transport.'
+        )
+
+    # Operation-specific methods and helpers
+    # --------------------------------------
     def __parse_if_data(self, response, constructor):
         '''If the response contains data, parse it with constructor.'''
         return (constructor.parse(response.Data)
                 if hasattr(response, 'Data') else None)
 
+    def __code(self, name_or_code, constructor):
+        '''Helper method to get the code for an Enum constructor.'''
+        if isinstance(name_or_code, basestring):
+            try:
+                code = constructor.encoding[name_or_code]
+            except Exception:
+                raise PTPError('Unknown property name. Try with a number?')
+        else:
+            code = name_or_code
+
+        return code
     def open_session(self):
         self.__session += 1
         self.__transaction = 0
@@ -877,7 +893,6 @@ class PTPDevice(object):
         return response
 
     # TODO: Add decorator to check there is an open session.
-
     def reset_device_prop_value(self, device_property, reset_all=False):
         '''Reset given device property to factory default.
 
@@ -989,18 +1004,6 @@ class PTPDevice(object):
             response,
             self._PTPArray('ObjectHandles', self._ObjectHandle)
         )
-
-    def __code(self, name_or_code, constructor):
-        '''Helper method to get the code for an Enum constructor.'''
-        if isinstance(name_or_code, basestring):
-            try:
-                code = constructor.encoding[name_or_code]
-            except Exception:
-                raise PTPError('Unknown property name. Try with a number?')
-        else:
-            code = name_or_code
-
-        return code
 
     def get_device_prop_desc(self, device_property):
         '''Retrieve the property description.

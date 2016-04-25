@@ -16,7 +16,7 @@ from construct import (
     ULInt16, ULInt32,
 )
 
-__all__ = ('PTPUSB', 'find_usb_cameras')
+__all__ = ('USBTransport', 'find_usb_cameras')
 __author__ = 'Luis Mario Domenzain'
 
 PTP_USB_CLASS = 6
@@ -46,8 +46,8 @@ def find_usb_cameras():
         )
 
 
-class PTPUSB(PTPDevice):
-    '''Implement bare PTP Device with USB transport.'''
+class USBTransport(PTPDevice):
+    '''Implement USB transport.'''
     def __init__(self, dev=None):
         '''Instantiate the first available PTP device over USB'''
         self.__setup_constructors()
@@ -352,7 +352,7 @@ class PTPUSB(PTPDevice):
 if __name__ == "__main__":
     devs = find_usb_cameras()
     for dev in devs:
-        camera = PTPUSB(dev)
+        camera = USBTransport(dev)
         device_info = camera.get_device_info()
         print device_info
         with camera.session():

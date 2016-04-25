@@ -11,7 +11,7 @@ extension:
     # Here PTPDevice can now be instantiated over transport
 '''
 import ptp
-from construct import Container, Pass, Enum, BitStruct, Flag, Padding
+from construct import BitStruct, Container, Enum, Flag, Padding, Pass
 
 __all__ = ('PTPDevice',)
 

@@ -1,7 +1,7 @@
 '''This module implements the USB transport layer for PTP.
 
 It exports the PTPUSB class. Both the transport layer and the basic PTP
-impelementation are Vendor agnostic. Vendor extensions should extend these to
+implementation are Vendor agnostic. Vendor extensions should extend these to
 support more operations.
 '''
 import usb.core

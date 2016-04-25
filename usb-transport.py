@@ -352,18 +352,7 @@ if __name__ == "__main__":
     for dev in devs:
         camera = PTPUSB(dev)
         device_info = camera.get_device_info()
+        print device_info
         with camera.session():
-            device_info = camera.get_device_info()
-
             for prop in device_info.DevicePropertiesSupported:
                 print camera.get_device_prop_desc(prop)
-
-            handles = camera.get_object_handles(
-                None,
-                all_formats=True,
-                all_storage_ids=True
-            )
-
-            for handle in handles:
-                print camera.get_object_info(handle)
-                print camera.get_thumb(handle)

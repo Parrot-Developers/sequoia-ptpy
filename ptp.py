@@ -1035,6 +1035,20 @@ class PTPDevice(object):
         # TODO: Parse property automatically after a get_device_prop_desc
         # return self.__parse_if_data(response, self._DevicePropValue)
 
+    def set_device_prop_value(self, device_property, value_payload):
+        # TODO: Manage building of value payloads automatically from previous
+        # GetDevicePropDesc
+        code = self.__code(device_property, self._PropertyCode)
+
+        ptp = Container(
+            OperationCode='SetDevicePropValue',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[code],
+        )
+        response = self.send(ptp, value_payload)
+        return response
+
     def initiate_capture(self, storage_id=0, object_format=0):
         '''Initiate capture with current camera settings.'''
         code = self.__code(object_format, self._ObjectFormatCode)

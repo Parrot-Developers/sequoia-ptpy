@@ -26,3 +26,11 @@ properties.
 # Requirements
 
 A `requirements.txt` file is provided for ease of development.
+
+# TODO
+
+- Rearrage classes so transport and extensions can be inherited separately and
+  in any order
+- Write top-level class to deal with extensions automatically from
+  `device_info`
+- Implement extension mapped codes from PTP1.1

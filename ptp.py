@@ -303,7 +303,7 @@ class PTPDevice(object):
         return Enum(
             self._UInt16('ObjectFormatCode'),
             # Ancilliary
-            Undefined=0x3000,
+            UndefinedAncilliary=0x3000,
             Association=0x3001,
             Script=0x3002,
             Executable=0x3003,
@@ -318,6 +318,7 @@ class PTPDevice(object):
             ASF=0x300C,
             QT=0x300D,
             # Images
+            UndefinedImage=0x3800,
             EXIF_JPEG=0x3801,
             TIFF_EP=0x3802,
             FlashPix=0x3803,

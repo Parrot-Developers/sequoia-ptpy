@@ -9,9 +9,9 @@ setup(
     name='ptpy',
     version='0.0.0dev',
     description='A pure Python implementation of Picture Transfer Protocol.',
-    long_description=read('README.txt'),
+    long_description=read('README.md'),
     packages=find_packages(exclude=['tests', 'examples']),
-    keywords='ptp mtp usb ip',
+    keywords='ptp mtp usb ip ptpip ptpusb parrot canon nikon microsoft',
     author='Luis Mario Domenzain',
     author_email='ld@airinov.fr',
 )

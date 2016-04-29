@@ -841,6 +841,7 @@ class PTPDevice(object):
             code = name_or_code
 
         return code
+
     def open_session(self):
         self.__session += 1
         self.__transaction = 0

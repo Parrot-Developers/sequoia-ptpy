@@ -358,3 +358,6 @@ if __name__ == "__main__":
         with camera.session():
             for prop in device_info.DevicePropertiesSupported:
                 print camera.get_device_prop_desc(prop)
+                value = camera.get_device_prop_value(prop)
+                print value
+                print camera.set_device_prop_value(prop, value.Data)

@@ -11,7 +11,9 @@ extension:
     # Here PTPDevice can now be instantiated over transport
 '''
 import ptp
-from construct import BitStruct, Container, Enum, Flag, Padding, Pass
+from construct import (
+    BitStruct, Container, Enum, ExprAdapter, Flag, Padding, Pass
+)
 
 __all__ = ('PTPDevice',)
 
@@ -85,30 +87,89 @@ class PTPDevice(ptp.PTPDevice):
             **product_filesystem_types
         )
 
-    # TODO: Nicer decoding of fixed length arrays.
+    # TODO: Nicer decoding of Sunshine.
     def _Sunshine(self):
         return self._PTPArray('Sunshine', self._UInt32('Int'))
 
+    # TODO: Nicer decoding of Temperature.
     def _Temperature(self):
         return self._PTPArray('Temperature', self._UInt32('Int'))
 
     def _Angle(self):
-        return self._PTPArray('Angle', self._UInt32('Int'))
+        return ExprAdapter(
+            self._PTPArray('Angle', self._UInt32('Int')),
+            encoder=lambda obj, ctx: [obj.Yaw, obj.Pitch, obj.Roll],
+            decoder=lambda obj, ctx: Container(
+                Yaw=obj[0], Pitch=obj[1], Roll=obj[2]
+            ),
+        )
 
     def _GPS(self):
-        return self._PTPArray('GPS', self._UInt32('Int'))
+        return ExprAdapter(
+            self._PTPArray('GPS', self._UInt32('Int')),
+            encoder=lambda obj, ctx: [
+                obj.Longitude.Deg, obj.Longitude.Min, obj.Longitude.Sec,
+                obj.Latitude.Deg, obj.Latitude.Min, obj.Latitude.Sec,
+                obj.Altitude,
+            ],
+            decoder=lambda obj, ctx: Container(
+                Longitude=Container(Deg=obj[0], Min=obj[1], Sec=obj[2]),
+                Latitude=Container(Deg=obj[3], Min=obj[4], Sec=obj[5]),
+                Altitude=obj[6]
+            ),
+        )
 
     def _Gyroscope(self):
-        return self._PTPArray('Gyroscope', self._UInt32('Int'))
+        return ExprAdapter(
+            self._PTPArray('Gyroscope', self._UInt32('Int')),
+            encoder=lambda obj, ctx: [obj.X, obj.Y, obj.Z],
+            decoder=lambda obj, ctx: Container(
+                X=obj[0], Y=obj[1], Z=obj[2],
+            ),
+        )
 
     def _Accelerometer(self):
-        return self._PTPArray('Accelerometer', self._UInt32('Int'))
+        return ExprAdapter(
+            self._PTPArray('Accelerometer', self._UInt32('Int')),
+            encoder=lambda obj, ctx: [obj.X, obj.Y, obj.Z],
+            decoder=lambda obj, ctx: Container(
+                X=obj[0], Y=obj[1], Z=obj[2],
+            ),
+        )
 
     def _Magnetometer(self):
-        return self._PTPArray('Magnetometer', self._UInt32('Int'))
+        return ExprAdapter(
+            self._PTPArray('Magnetometer', self._UInt32('Int')),
+            encoder=lambda obj, ctx: [obj.X, obj.Y, obj.Z],
+            decoder=lambda obj, ctx: Container(
+                X=obj[0], Y=obj[1], Z=obj[2],
+            ),
+        )
 
     def _IMU(self):
-        return self._PTPArray('IMU', self._UInt32('Int'))
+        return ExprAdapter(
+            self._PTPArray('IMU', self._UInt32('Int')),
+            encoder=lambda obj, ctx: [
+                obj.Gyroscope.X,
+                obj.Gyroscope.Y,
+                obj.Gyroscope.Z,
+                obj.Accelerometer.X,
+                obj.Accelerometer.Y,
+                obj.Accelerometer.Z,
+                obj.Magnetometer.X,
+                obj.Magnetometer.Y,
+                obj.Magnetometer.Z,
+                obj.Angle.Yaw,
+                obj.Angle.Pitch,
+                obj.Angle.Roll,
+            ],
+            decoder=lambda obj, ctx: Container(
+                Gyroscope=Container(X=obj[0], Y=obj[1], Z=obj[2]),
+                Accelerometer=Container(X=obj[3], Y=obj[4], Z=obj[5]),
+                Magnetometer=Container(X=obj[6], Y=obj[7], Z=obj[8]),
+                Angle=Container(Yaw=obj[9], Pitch=obj[10], Roll=obj[11]),
+            ),
+        )
 
     def _Status(self):
         return BitStruct(

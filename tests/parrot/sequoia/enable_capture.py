@@ -63,6 +63,6 @@ for mask in tqdm(range(2**number_of_cameras)):
                 'Failed with {} images for mask {}'.format(acquired, bin(mask))
             )
     tqdm.write(
-        'Received {} images for mask {}'
+        'Success: {} images for mask {}'
         .format(acquired, bin(mask))
     )

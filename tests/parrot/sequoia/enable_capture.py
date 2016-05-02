@@ -18,7 +18,7 @@ else:
 # cameras activated. Do this for all combinations of activated sensors.
 number_of_cameras = 5
 
-for mask in tqdm(range(2**number_of_cameras)):
+for mask in tqdm(range(2**number_of_cameras), unit='test'):
     enable_response = sequoia.set_device_prop_value(
         'PhotoSensorEnableMask',
         sequoia._UInt32('Mask').build(mask)
@@ -58,10 +58,11 @@ for mask in tqdm(range(2**number_of_cameras)):
             tqdm.write('Received event {}'.format(evt.EventCode))
         # Allow for one minute delays in events...
         if time() - tic > 60:
-            raise Exception(
+            tqdm.write(
                 'Waited for 1 minute before giving up. '
                 'Failed with {} images for mask {}'.format(acquired, bin(mask))
             )
+            break
     tqdm.write(
         'Success: {} images for mask {}'
         .format(acquired, bin(mask))

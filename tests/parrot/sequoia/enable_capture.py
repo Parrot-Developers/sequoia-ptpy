@@ -48,6 +48,7 @@ for mask in tqdm(range(2**number_of_cameras), unit='test'):
     acquired = 0
     expected = bin(mask).count('1')
     tic = time()
+    failed = False
     while acquired < expected:
         evt = sequoia.event()
         if evt and evt.EventCode == 'ObjectAdded':
@@ -62,8 +63,10 @@ for mask in tqdm(range(2**number_of_cameras), unit='test'):
                 'Waited for 1 minute before giving up. '
                 'Failed with {} images for mask {}'.format(acquired, bin(mask))
             )
+            failed = True
             break
-    tqdm.write(
-        'Success: {} images for mask {}'
-        .format(acquired, bin(mask))
-    )
+    if not failed:
+        tqdm.write(
+            'Success: {} images for mask {}'
+            .format(acquired, bin(mask))
+        )

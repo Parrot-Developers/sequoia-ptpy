@@ -23,7 +23,7 @@ number_of_cameras = 5
 def initiate_capture():
     '''Initiate capture.'''
     capture_response = sequoia.initiate_capture()
-    # If the device is donig something else, try again ten times waiting a
+    # If the device is doing something else, try again ten times waiting a
     # second.
     tries = 0
     while capture_response.ResponseCode != 'OK' and tries < 10:

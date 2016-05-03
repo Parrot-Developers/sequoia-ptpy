@@ -12,8 +12,8 @@ from usb.util import (
 from ptp import PTPError
 from parrot import PTPDevice
 from construct import (
-    Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
-    ULInt16, ULInt32,
+    Array, Bytes, Container, Embedded, Enum, ExprAdapter, FieldError, Range,
+    Struct, ULInt16, ULInt32,
 )
 
 __all__ = ('USBTransport', 'find_usb_cameras')
@@ -329,12 +329,15 @@ class USBTransport(PTPDevice):
                     self.__EventHeader.sizeof(),
                     timeout=0 if wait else 1
                     )
+            transaction = self.__EventTransaction.parse(response)
         except usb.core.USBError as e:
             # Ignore timeout.
             if e.errno == 110:
                 return None
-        # Check for event adding SessionID.
-        transaction = self.__EventTransaction.parse(response)
+        except FieldError:
+            # Ignore incomplete reads.
+                return None
+
         if transaction.Type != 'Event':
             raise PTPError(
                 'Unexpected USB transfer type.'

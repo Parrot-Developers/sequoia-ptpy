@@ -31,7 +31,7 @@ def initiate_capture():
         sleep(1)
         capture_response = sequoia.initiate_capture()
     if capture_response.ResponseCode != 'OK':
-        tqdm.write(capture_response)
+        tqdm.write(str(capture_response))
         raise Exception('Could not InitiateCapture')
 
 
@@ -55,7 +55,7 @@ def set_valid_mask(mask):
             sequoia._UInt32('Mask').build(mask)
         )
     if enable_response.ResponseCode != 'OK':
-        tqdm.write(enable_response)
+        tqdm.write(str(enable_response))
         raise Exception(
             'Could not set PhotoSensorEnableMask {}'
             .format(bin(mask))

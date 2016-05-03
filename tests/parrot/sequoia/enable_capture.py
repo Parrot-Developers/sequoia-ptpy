@@ -19,6 +19,8 @@ else:
 number_of_cameras = 5
 
 for mask in tqdm(range(2**number_of_cameras), unit='test'):
+    tqdm.write('-------------------------------------------------')
+    tqdm.write('Sending PhotoSensorEnableMask {}'.format(bin(mask)))
     enable_response = sequoia.set_device_prop_value(
         'PhotoSensorEnableMask',
         sequoia._UInt32('Mask').build(mask)
@@ -32,28 +34,34 @@ for mask in tqdm(range(2**number_of_cameras), unit='test'):
     while enable_response.ResponseCode != 'OK' and tries < 10:
         tries += 1
         sleep(1)
+        tqdm.write('Sending PhotoSensorEnableMask {}'.format(bin(mask)))
         enable_response = sequoia.set_device_prop_value(
             'PhotoSensorEnableMask',
             sequoia._UInt32('Mask').build(mask)
         )
     if enable_response.ResponseCode != 'OK':
-        print(enable_response)
+        tqdm.write(enable_response)
         raise Exception(
             'Could not set PhotoSensorEnableMask {}'
             .format(bin(mask))
         )
 
     # Capture image and count the ObjectAdded events.
+    tqdm.write('Sending InitiateCapture')
     sequoia.initiate_capture()
     acquired = 0
+    n_added = 0
     expected = bin(mask).count('1')
     tic = time()
     failed = False
     while acquired < expected:
         evt = sequoia.event()
         if evt and evt.EventCode == 'ObjectAdded':
+            n_added += 1
+            tqdm.write('Sending GetObjectInfo')
             info = sequoia.get_object_info(evt.Parameter[0])
-            if 'TIFF' in info.ObjectFormat or 'EXIF_JPEG' in info.ObjectFormat:
+            # tqdm.write(str(info))
+            if info and 'TIFF' in info.ObjectFormat or 'EXIF_JPEG' in info.ObjectFormat:
                 acquired += 1
         elif evt:
             tqdm.write('Received event {}'.format(evt.EventCode))
@@ -61,7 +69,8 @@ for mask in tqdm(range(2**number_of_cameras), unit='test'):
         if time() - tic > 60:
             tqdm.write(
                 'Waited for 1 minute before giving up. '
-                'Failed with {} images for mask {}'.format(acquired, bin(mask))
+                'Failed with {} ({} ObjectAdded) images for mask {}'
+                .format(acquired, n_added, bin(mask))
             )
             failed = True
             break

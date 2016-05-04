@@ -9,7 +9,9 @@ try:
 except Exception:
     pass
 
-device_info = camera.get_device_info() if camera else []
+if camera:
+    device_info = camera.get_device_info()
+props = device_info.DevicePropertiesSupported if camera else []
 
 
 def check_response_code_different(response, value, reason):
@@ -23,7 +25,7 @@ def check_response_code_different(response, value, reason):
 @pytest.mark.incremental
 @pytest.mark.skipif(camera is None, reason='No camera available to test')
 class TestGetSetResetProperties:
-    @pytest.mark.parametrize('prop', device_info.DevicePropertiesSupported)
+    @pytest.mark.parametrize('prop', props)
     def test_get_set_property(self, prop):
         '''Set property to their current value to check for writability'''
         with camera.session():
@@ -65,7 +67,7 @@ class TestGetSetResetProperties:
                 assert set_response.ResponseCode != 'AccessDenied',\
                     'The property is reported as GetSet but access is denied.'
 
-    @pytest.mark.parametrize('prop', device_info.DevicePropertiesSupported)
+    @pytest.mark.parametrize('prop', props)
     def test_reset_property(self, prop):
         '''Set property to their current value to check for writability'''
         with camera.session():
@@ -78,6 +80,5 @@ class TestGetSetResetProperties:
             )
             desc = camera.get_device_prop_desc(prop)
             assert desc.CurrentValue == desc.FactoryDefaultValue
-
 
     # TODO: test setting all possible values of all possible properties.

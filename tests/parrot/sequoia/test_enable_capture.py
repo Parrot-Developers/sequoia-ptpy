@@ -8,8 +8,8 @@ devs = find_usb_cameras()
 
 sequoia = None
 for dev in devs:
-    camera = USBTransport(dev)
     try:
+        camera = USBTransport(dev)
         device_info = camera.get_device_info()
         if 'Sequoia' in device_info.Model:
             sequoia = camera

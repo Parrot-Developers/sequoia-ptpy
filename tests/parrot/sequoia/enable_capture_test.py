@@ -79,17 +79,20 @@ def test_enable_capture(mask):
         if not set_valid_mask(mask):
             return
         # Capture image and count the ObjectAdded events.
-        initiate_capture()
+        capture = initiate_capture()
         acquired = 0
         n_added = 0
         expected = bin(mask).count('1')
         tic = time()
-        failed = False
         while acquired < expected:
             # Check events
             evt = sequoia.event()
             # If object added verify is it is an image
-            if evt and evt.EventCode == 'ObjectAdded':
+            if (
+                    evt and
+                    evt.TransactionID == capture.TransactionID and
+                    evt.EventCode == 'ObjectAdded'
+            ):
                 n_added += 1
                 info = sequoia.get_object_info(evt.Parameter[0])
                 if (

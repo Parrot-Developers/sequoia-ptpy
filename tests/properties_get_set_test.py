@@ -12,10 +12,10 @@ except Exception:
 device_info = camera.get_device_info() if camera else []
 
 
-def check_response_code_different(response, value):
+def check_response_code_different(response, value, reason):
     'Check that the value of a response is not value.'
     try:
-        response.ResponseCode != value
+        assert response.ResponseCode != value, reason
     except AttributeError:
         pass
 
@@ -29,10 +29,31 @@ def test_get_set_property(prop):
         desc = camera.get_device_prop_desc(prop)
         set_response = camera.set_device_prop_value(prop, value.Data)
 
-        check_response_code_different(value, 'DevicePropNotSupported')
-        check_response_code_different(desc, 'DevicePropNotSupported')
-        check_response_code_different(set_response, 'DevicePropNotSupported')
-        check_response_code_different(set_response, 'InvalidDevicePropValue')
+        check_response_code_different(
+            value,
+            'DevicePropNotSupported',
+            'Device property is reported to be supported in DeviceInfo, '
+            'but then unsupported in GetDevicePropValue'
+        )
+        check_response_code_different(
+            desc,
+            'DevicePropNotSupported',
+            'Device property is reported to be supported in DeviceInfo, '
+            'but then unsupported in ResponseCode for GetDevicePropDesc'
+        )
+        check_response_code_different(
+            set_response,
+            'DevicePropNotSupported',
+            'Device property is reported to be supported in DeviceInfo, '
+            'but then unsupported in SetDevicePropValue'
+        )
+        check_response_code_different(
+            set_response,
+            'InvalidDevicePropValue',
+            'Setting a property to a value it already has '
+            'should never give InvalidDevicePropValue'
+
+        )
 
         if desc.GetSet == 'Get':
             assert set_response.ResponseCode == 'AccessDenied',\

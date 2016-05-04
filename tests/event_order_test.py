@@ -2,14 +2,17 @@
 from ptpy.usb_transport import USBTransport
 # TODO Fix import once ptpy module is better structured.
 from time import time
+import pytest
+
+camera = None
+try:
+    camera = USBTransport()
+except Exception:
+    pass
 
 
+@pytest.mark.skipif(camera is None, reason='No camera available to test')
 def test_order():
-    try:
-        camera = USBTransport()
-    except Exception:
-        return
-
     with camera.session():
         tic = time()
         print('Clearing all events (10s)')

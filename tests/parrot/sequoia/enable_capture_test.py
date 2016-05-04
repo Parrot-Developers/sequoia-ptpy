@@ -63,6 +63,7 @@ def set_valid_mask(mask):
     return True
 
 
+@pytest.mark.skipif(sequoia is None, reason='No Sequoia available for test.')
 @pytest.mark.parametrize(
     ('mask'),
     range(2**number_of_cameras),
@@ -112,5 +113,5 @@ def test_enable_capture(mask):
             # something wrong.
             assert time() - tic <= 60,\
                 'Waited for 1 minute before giving up. '\
-                'Failed with {} ({} ObjectAdded) images for mask {}'\
+                'Failed with {} images ({} ObjectAdded) for mask {}'\
                 .format(acquired, n_added, bin(mask))

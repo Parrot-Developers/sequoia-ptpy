@@ -9,8 +9,7 @@ try:
 except Exception:
     pass
 
-if camera:
-    device_info = camera.get_device_info()
+device_info = camera.get_device_info() if camera else []
 
 
 def check_response_code_different(response, value):

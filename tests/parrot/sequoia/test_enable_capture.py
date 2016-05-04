@@ -23,6 +23,7 @@ for dev in devs:
 number_of_cameras = 5
 
 
+# TODO: Put this function in a separate module of test helpers.
 def initiate_capture():
     '''Initiate capture.'''
     capture_response = sequoia.initiate_capture()

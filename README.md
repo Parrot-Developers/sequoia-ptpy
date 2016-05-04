@@ -27,6 +27,11 @@ properties.
 
 A `requirements.txt` file is provided for ease of development.
 
+# Tests
+
+Vendors might want to test their devices against the hardware tests. These
+become immediately accessible when a camera is connected.
+
 # TODO
 
 - Rearrage classes so transport and extensions can be inherited separately and

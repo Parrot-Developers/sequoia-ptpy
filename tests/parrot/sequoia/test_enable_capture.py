@@ -9,10 +9,13 @@ devs = find_usb_cameras()
 sequoia = None
 for dev in devs:
     camera = USBTransport(dev)
-    device_info = camera.get_device_info()
-    if 'Sequoia' in device_info.Model:
-        sequoia = camera
-        break
+    try:
+        device_info = camera.get_device_info()
+        if 'Sequoia' in device_info.Model:
+            sequoia = camera
+            break
+    except Exception:
+        pass
 
 
 # Verify that there are at least N images added after an InitiateCapture with N

@@ -69,9 +69,6 @@ def set_valid_mask(mask):
 )
 def test_enable_capture(mask):
     '''Verify that a capture with N enabled sensors poduces N images.'''
-    if sequoia is None:
-        return
-
     with sequoia.session():
 
         # If mask is invalid, skip.

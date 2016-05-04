@@ -25,4 +25,8 @@ def test_order():
 
         assert('CaptureComplete' in codes)
         assert('ObjectAdded' in codes)
-        assert(codes.index('ObjectAdded') < codes.index('CaptureComplete'))
+        capture_complete_index = codes.index('CaptureComplete')
+        last_object_added_index = (
+            (len(codes) - 1) - codes[::-1].index('ObjectAdded')
+        )
+        assert(last_object_added_index < capture_complete_index)

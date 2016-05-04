@@ -203,29 +203,35 @@ class USBTransport(PTPDevice):
                 decoder=lambda obj, ctx: obj,
                 )
 
-    def __recv(self):
+    def __recv(self, event=False):
         '''Helper method for receiving non-event data.'''
+        ep = self.__intep if event else self.__inep
         try:
-            usbdata = self.__inep.read(self.__inep.wMaxPacketSize, timeout=1)
+            usbdata = ep.read(ep.wMaxPacketSize, timeout=1)
         except usb.core.USBError as e:
             # Ignore timeout once.
             if e.errno == 110:
-                usbdata = self.__inep.read(
-                    self.__inep.wMaxPacketSize,
-                    timeout=5000
-                )
+                if event:
+                    return None
+                else:
+                    usbdata = ep.read(
+                        ep.wMaxPacketSize,
+                        timeout=5000
+                    )
             else:
                 raise e
         header = self.__ResponseHeader.parse(usbdata[0:self.__Header.sizeof()])
         command = self.__CommandHeader.parse(usbdata[0:self.__Header.sizeof()])
-        if header.Type not in ['Response', 'Data']:
+        event = self.__EventHeader.parse(usbdata[0:self.__Header.sizeof()])
+        if header.Type not in ['Response', 'Data', 'Event']:
             raise PTPError(
                 'Unexpected USB transfer type.'
-                'Expected Response or Data but reveived {}'.format(header.Type)
+                'Expected Response, Event or Data but reveived {}'
+                .format(header.Type)
             )
         while len(usbdata) < header.Length:
-            usbdata += self.__inep.read(
-                self.__inep.wMaxPacketSize,
+            usbdata += ep.read(
+                ep.wMaxPacketSize,
                 timeout=5000
             )
 
@@ -238,20 +244,24 @@ class USBTransport(PTPDevice):
         if transaction.Type == 'Response':
             response['ResponseCode'] = transaction.ResponseCode
             response['Parameter'] = self.__Param.parse(transaction.Payload)
+        elif transaction.Type == 'Event':
+            response['EventCode'] = event.EventCode
+            response['Parameter'] = self.__Param.parse(transaction.Payload)
         else:
             response['OperationCode'] = command.OperationCode
             response['Data'] = transaction.Payload
         return response
 
-    def __send(self, ptp_container):
+    def __send(self, ptp_container, event=False):
         '''Helper method for sending data.'''
+        ep = self.__intep if event else self.__outep
         transaction = self.__CommandTransaction.build(ptp_container)
         try:
-            self.__outep.write(transaction, timeout=1)
+            ep.write(transaction, timeout=1)
         except usb.core.USBError as e:
             # Ignore timeout once
             if e.errno == 110:
-                self.__outep.write(transaction, timeout=5000)
+                ep.write(transaction, timeout=5000)
 
     def __send_request(self, ptp_container):
         '''Send PTP request without checking answer.'''
@@ -323,33 +333,7 @@ class USBTransport(PTPDevice):
 
         If `wait` this function is blocking. Otherwise it may return None.
         '''
-        try:
-            response = self.__intep.read(
-                    self.__FullEventParam.sizeof() +
-                    self.__EventHeader.sizeof(),
-                    timeout=0 if wait else 1
-                    )
-            transaction = self.__EventTransaction.parse(response)
-        except usb.core.USBError as e:
-            # Ignore timeout.
-            if e.errno == 110:
-                return None
-        except FieldError:
-            # Ignore incomplete reads.
-                return None
-
-        if transaction.Type != 'Event':
-            raise PTPError(
-                'Unexpected USB transfer type.'
-                'Expected Event but received {}'.format(transaction.Type)
-            )
-        payload = transaction.Payload
-        event = Container()
-        event['Parameter'] = self.__Param.parse(payload)
-        event['SessionID'] = self.session_id
-        event['TransactionID'] = transaction.TransactionID
-        event['EventCode'] = transaction.EventCode
-        return event
+        return self.__recv(event=True)
 
 
 if __name__ == "__main__":

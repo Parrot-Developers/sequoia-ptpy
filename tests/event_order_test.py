@@ -29,10 +29,12 @@ def test_order():
                 if evt.TransactionID == capture.TransactionID:
                     codes.append(evt.EventCode)
 
-        assert('CaptureComplete' in codes)
-        assert('ObjectAdded' in codes)
+        assert 'CaptureComplete' in codes, 'No CaptureComplete received.'
+        assert 'ObjectAdded' in codes,\
+            'No ObjectAdded received for capture transaction.'
         capture_complete_index = codes.index('CaptureComplete')
         last_object_added_index = (
             (len(codes) - 1) - codes[::-1].index('ObjectAdded')
         )
-        assert(last_object_added_index < capture_complete_index)
+        assert last_object_added_index < capture_complete_index,\
+            'ObjectAdded happened after CaptureComplete.'

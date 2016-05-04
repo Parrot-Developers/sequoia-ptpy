@@ -45,7 +45,6 @@ def set_valid_mask(mask):
     )
     # If the combination of enabled cameras is invalid, skip it.
     if enable_response.ResponseCode == 'InvalidDevicePropValue':
-        print('{} is an invalid mask. Skipping it.'.format(bin(mask)))
         return False
     # If the device is busy, try again ten times waiting a second.
     tries = 0
@@ -74,7 +73,6 @@ def test_enable_capture(mask):
         return
 
     with sequoia.session():
-        print('Testing capture for mask {}'.format(bin(mask)))
 
         # If mask is invalid, skip.
         if not set_valid_mask(mask):
@@ -104,14 +102,17 @@ def test_enable_capture(mask):
                     acquired += 1
             # Otherwise if the capture is complete, tally up.
             elif evt and evt.EventCode == 'CaptureCompleted':
-                assert acquired < expected,\
-                    'More images were expected than received.'
+                assert acquired == expected,\
+                    '{} images were expected than received. '\
+                    'This is not a violation of PTP.'\
+                    .format('More' if acquired < expected else 'Less')
                 return
             # Allow for one-minute delays in events... Though the
             # asynchronous event may take an indefinite amount of time,
             # anything longer than about ten seconds indicates there's
             # something wrong.
-            assert time() - tic <= 60,\
-                'Waited for 1 minute before giving up. '\
-                'Failed with {} images ({} ObjectAdded) for mask {}'\
-                .format(acquired, n_added, bin(mask))
+            assert time() - tic <= 40,\
+                'Waited for 40 seconds before giving up.\n'\
+                'No CaptureComplete received.\n'\
+                'Failed with {} images ({} ObjectAdded) for mask {} {} {}'\
+                .format(acquired, n_added, mask, hex(mask), bin(mask))

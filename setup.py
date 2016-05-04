@@ -7,11 +7,13 @@ def read(filename):
     return open(os.path.join(os.path.dirname(__file__), filename)).read()
 
 install_requirements = [
-    str(r.req) for r in parse_requirements('requirements.txt', session=False)
+    str(r.req)
+    for r in parse_requirements('requirements.txt', session=False)
 ]
 
 test_requirements = [
-    str(r.req) for r in parse_requirements('tests/requirements.txt', session=False)
+    str(r.req)
+    for r in parse_requirements('tests/requirements.txt', session=False)
 ]
 
 setup(
@@ -25,4 +27,5 @@ setup(
     author_email='ld@airinov.fr',
     install_requires=install_requirements,
     tests_require=test_requirements,
+    setup_requires=['pytest-runner'],
 )

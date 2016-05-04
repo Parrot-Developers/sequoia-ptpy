@@ -31,9 +31,10 @@ def initiate_capture():
         sleep(1)
         capture_response = sequoia.initiate_capture()
     if capture_response.ResponseCode != 'OK':
-        print('Could not initiate capture:')
         print(capture_response)
-        assert(capture_response.ResponseCode == 'OK')
+        assert capture_response.ResponseCode == 'OK', \
+            'Could not initiate capture after 10 tries.'
+    return capture_response
 
 
 def set_valid_mask(mask):
@@ -56,12 +57,9 @@ def set_valid_mask(mask):
             sequoia._UInt32('Mask').build(mask)
         )
     if enable_response.ResponseCode != 'OK':
-        print(str(enable_response))
-        print(
-            'Could not set PhotoSensorEnableMask {}'
-            .format(bin(mask))
-        )
-        assert(enable_response.ResponseCode == 'OK')
+        print(enable_response)
+        assert enable_response.ResponseCode == 'OK', \
+            'Could not set PhotoSensorEnableMask {}'.format(bin(mask))
     return True
 
 
@@ -102,19 +100,14 @@ def test_enable_capture(mask):
                     acquired += 1
             # Otherwise if the capture is complete, tally up.
             elif evt and evt.EventCode == 'CaptureCompleted':
-                failed = acquired < expected
-                break
+                assert acquired < expected,\
+                    'More images were expected than received.'
+                return
             # Allow for one-minute delays in events... Though the
             # asynchronous event may take an indefinite amount of time,
             # anything longer than about ten seconds indicates there's
             # something wrong.
-            if time() - tic > 60:
-                failed = True
-                break
-        if failed:
-            print(
-                'Waited for 1 minute before giving up. '
-                'Failed with {} ({} ObjectAdded) images for mask {}'
+            assert time() - tic <= 60,\
+                'Waited for 1 minute before giving up. '\
+                'Failed with {} ({} ObjectAdded) images for mask {}'\
                 .format(acquired, n_added, bin(mask))
-            )
-        assert(not failed)

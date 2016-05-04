@@ -94,7 +94,9 @@ with sequoia.session():
             elif evt and evt.EventCode == 'CaptureCompleted':
                 failed = acquired < expected
                 break
-            # Allow for one-minute delays in events...
+            # Allow for one-minute delays in events... Though the asynchronous
+            # event may take an indefinite amount of time, anything longer than
+            # about ten seconds indicates there's something wrong.
             if time() - tic > 60:
                 failed = True
                 break

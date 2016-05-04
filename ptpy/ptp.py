@@ -604,7 +604,7 @@ class PTPDevice(object):
             self._PropertyCode,
             self._DataTypeCode,
             self._GetSet,
-            Rename('FactoryDefaultFalue', self._DataType),
+            Rename('FactoryDefaultValue', self._DataType),
             Rename('CurrentValue', self._DataType),
             self._FormFlag,
             self._Form(self._DataType),

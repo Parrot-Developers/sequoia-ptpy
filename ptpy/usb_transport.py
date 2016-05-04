@@ -203,11 +203,11 @@ class USBTransport(PTPDevice):
                 decoder=lambda obj, ctx: obj,
                 )
 
-    def __recv(self, event=False):
+    def __recv(self, event=False, wait=False):
         '''Helper method for receiving non-event data.'''
         ep = self.__intep if event else self.__inep
         try:
-            usbdata = ep.read(ep.wMaxPacketSize, timeout=1)
+            usbdata = ep.read(ep.wMaxPacketSize, timeout=0 if wait else 5)
         except usb.core.USBError as e:
             # Ignore timeout once.
             if e.errno == 110:
@@ -333,7 +333,7 @@ class USBTransport(PTPDevice):
 
         If `wait` this function is blocking. Otherwise it may return None.
         '''
-        return self.__recv(event=True)
+        return self.__recv(event=True, wait=wait)
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
 *.pyc
 cscope.out
 *.egg-info
+.cache

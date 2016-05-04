@@ -65,7 +65,7 @@ def set_valid_mask(mask):
     return True
 
 
-@pytest.mark.parameterize(
+@pytest.mark.parametrize(
     ('mask'),
     range(2**number_of_cameras),
 )
@@ -97,7 +97,7 @@ def test_enable_capture(mask):
                 if (
                         info and
                         ('TIFF' in info.ObjectFormat or
-                            'EXIF_JPEG' in info.ObjectFormat)
+                         'EXIF_JPEG' in info.ObjectFormat)
                 ):
                     acquired += 1
             # Otherwise if the capture is complete, tally up.
@@ -111,15 +111,10 @@ def test_enable_capture(mask):
             if time() - tic > 60:
                 failed = True
                 break
-        assert(not failed)
         if failed:
             print(
                 'Waited for 1 minute before giving up. '
                 'Failed with {} ({} ObjectAdded) images for mask {}'
                 .format(acquired, n_added, bin(mask))
             )
-        else:
-            print(
-                'Success: {} images for mask {}'
-                .format(acquired, bin(mask))
-            )
+        assert(not failed)

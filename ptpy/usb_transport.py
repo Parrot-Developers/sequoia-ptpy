@@ -65,12 +65,13 @@ class USBTransport(PTPDevice):
         if self.__dev.is_kernel_driver_active(self.__intf.bInterfaceNumber):
             try:
                 self.__dev.detach_kernel_driver(self.__intf.bInterfaceNumber)
+                usb.util.claim_interface(self.__dev, self.__intf)
             except usb.core.USBError:
                 raise PTPError(
                         'Could not detach kernel driver.\n'
                         'Maybe the camera is mounted?'
                         )
-                usb.util.claim_interface(self.__dev, self.__intf)
+        usb.util.claim_interface(self.__dev, self.__intf)
 
     # Helper methods.
     # ---------------------

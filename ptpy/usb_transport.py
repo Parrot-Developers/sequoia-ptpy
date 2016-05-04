@@ -209,8 +209,8 @@ class USBTransport(PTPDevice):
         try:
             usbdata = ep.read(ep.wMaxPacketSize, timeout=0 if wait else 5)
         except usb.core.USBError as e:
-            # Ignore timeout once.
-            if e.errno == 110:
+            # Ignore timeout or busy device once.
+            if e.errno == 110 or e.errno == 16:
                 if event:
                     return None
                 else:
@@ -259,8 +259,8 @@ class USBTransport(PTPDevice):
         try:
             ep.write(transaction, timeout=1)
         except usb.core.USBError as e:
-            # Ignore timeout once
-            if e.errno == 110:
+            # Ignore timeout or busy device once.
+            if e.errno == 110 or e.errno == 16:
                 ep.write(transaction, timeout=5000)
 
     def __send_request(self, ptp_container):

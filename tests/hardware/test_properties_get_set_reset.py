@@ -67,18 +67,17 @@ class TestGetSetResetProperties:
                 assert set_response.ResponseCode != 'AccessDenied',\
                     'The property is reported as GetSet but access is denied.'
 
-    @pytest.mark.parametrize('prop', props)
-    def test_reset_property(self, prop):
+    def test_reset_property(self, camera, device_property):
         '''Set property to their current value to check for writability'''
         with camera.session():
-            reset = camera.reset_device_prop_value(prop)
-            check_response_code_different(
+            reset = camera.reset_device_prop_value(device_property)
+            assert_response_code_different(
                 reset,
                 'DevicePropNotSupported',
                 'Device property is reported to be supported in DeviceInfo, '
                 'but then unsupported in ResetDevicePropValue'
             )
-            desc = camera.get_device_prop_desc(prop)
+            desc = camera.get_device_prop_desc(device_property)
             assert desc.CurrentValue == desc.FactoryDefaultValue
 
     # TODO: test setting all possible values of all possible properties.

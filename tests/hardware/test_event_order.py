@@ -5,24 +5,24 @@ import pytest
 
 
 class TestCapture(TestCamera):
-    def test_order(self, cam):
-        device_info = cam.get_device_info()
+    def test_order(self, camera):
+        device_info = camera.get_device_info()
         print device_info
         if 'InitiateCapture' not in device_info.OperationsSupported:
             pytest.skip('Capture is not supported by camera.')
 
-        with cam.session():
+        with camera.session():
             tic = time()
             print('Clearing all events (10s)')
             while time() - tic < 10:
-                evt = cam.event()
+                evt = camera.event()
             print('Initiating capture')
-            capture = cam.initiate_capture()
+            capture = camera.initiate_capture()
             codes = []
             tic = time()
             print('Waiting for capture events (10s)')
             while time() - tic < 10:
-                evt = cam.event()
+                evt = camera.event()
                 if evt:
                     print evt
                     if evt.TransactionID == capture.TransactionID:

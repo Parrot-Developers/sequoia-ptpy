@@ -1,57 +1,44 @@
-# TODO Fix import once ptpy module is better structured.
-from ptpy.usb_transport import USBTransport
-import pytest
-
-# TODO: Refactor getting camera for all hardware tests.
-camera = None
-try:
-    camera = USBTransport()
-except Exception:
-    pass
-
-if camera:
-    device_info = camera.get_device_info()
-props = device_info.DevicePropertiesSupported if camera else []
+from test_camera import TestCamera
 
 
-def check_response_code_different(response, value, reason):
-    'Check that the value of a response is not value.'
+def assert_response_code_different(response, value, reason):
+    'Check that the code of a response is not value.'
     try:
         assert response.ResponseCode != value, reason
     except AttributeError:
         pass
 
 
-@pytest.mark.incremental
-@pytest.mark.skipif(camera is None, reason='No camera available to test')
-class TestGetSetResetProperties:
-    @pytest.mark.parametrize('prop', props)
-    def test_get_set_property(self, prop):
+class TestGetSetResetProperties(TestCamera):
+    def test_get_set_property(self, camera, device_property):
         '''Set property to their current value to check for writability'''
         with camera.session():
-            value = camera.get_device_prop_value(prop)
-            desc = camera.get_device_prop_desc(prop)
-            set_response = camera.set_device_prop_value(prop, value.Data)
+            value = camera.get_device_prop_value(device_property)
+            desc = camera.get_device_prop_desc(device_property)
+            set_response = camera.set_device_prop_value(
+                device_property,
+                value.Data
+            )
 
-            check_response_code_different(
+            assert_response_code_different(
                 value,
                 'DevicePropNotSupported',
                 'Device property is reported to be supported in DeviceInfo, '
                 'but then unsupported in GetDevicePropValue'
             )
-            check_response_code_different(
+            assert_response_code_different(
                 desc,
                 'DevicePropNotSupported',
                 'Device property is reported to be supported in DeviceInfo, '
                 'but then unsupported in ResponseCode for GetDevicePropDesc'
             )
-            check_response_code_different(
+            assert_response_code_different(
                 set_response,
                 'DevicePropNotSupported',
                 'Device property is reported to be supported in DeviceInfo, '
                 'but then unsupported in SetDevicePropValue'
             )
-            check_response_code_different(
+            assert_response_code_different(
                 set_response,
                 'InvalidDevicePropValue',
                 'Setting a property to a value it already has '

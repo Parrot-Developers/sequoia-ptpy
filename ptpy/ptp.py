@@ -404,7 +404,7 @@ class PTPDevice(object):
             self._UInt16('VendorExtensionVersion'),
             self._PTPString('VendorExtensionDesc'),
             self._UInt16('FunctionalMode'),
-            self._PTPArray('OperationSupported', self._OperationCode),
+            self._PTPArray('OperationsSupported', self._OperationCode),
             self._PTPArray('EventsSupported', self._EventCode),
             self._PTPArray('DevicePropertiesSupported', self._PropertyCode),
             self._PTPArray('CaptureFormats', self._ObjectFormatCode),

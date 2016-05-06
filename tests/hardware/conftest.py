@@ -10,9 +10,11 @@ except Exception:
     pass
 
 
-# Use the same camera for a testing session.
+# Use the same camera for a testing session. And skip all tests that use it.
 @pytest.fixture(scope='session', autouse=True)
 def camera():
+    if available_camera is None:
+        pytest.skip('No camera available to test')
     return available_camera
 
 
@@ -20,14 +22,18 @@ def camera():
 # may change on different functional modes.
 @pytest.fixture(scope='function', autouse=True)
 def device_properties(camera):
-    device_info = camera.get_device_info()
-    return device_info.DevicePropertiesSupported
+    device_props = (
+        camera.get_device_info().DevicePropertiesSupported if camera else []
+    )
+    return device_props
 
 
 @pytest.fixture(scope='function', autouse=True)
 def device_operations(camera):
-    device_info = camera.get_device_info()
-    return device_info.OperationsSupported
+    device_ops = (
+        camera.get_device_info().OperationsSupported if camera else []
+    )
+    return device_ops
 
 
 # TODO: This is a hacky solution to the lack of fixtures in parametrize. It
@@ -35,11 +41,13 @@ def device_operations(camera):
 def pytest_generate_tests(metafunc):
     if 'device_property' in metafunc.fixturenames:
         device_properties = (
-            available_camera.get_device_info().DevicePropertiesSupported
+            available_camera.get_device_info().DevicePropertiesSupported if
+            available_camera else []
         )
         metafunc.parametrize('device_property', device_properties)
     if 'device_operation' in metafunc.fixturenames:
         device_operations = (
-            available_camera.get_device_info().OperationsSupported
+            available_camera.get_device_info().OperationsSupported if
+            available_camera else []
         )
         metafunc.parametrize('device_property', device_operations)

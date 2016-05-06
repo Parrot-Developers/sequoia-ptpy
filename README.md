@@ -32,6 +32,13 @@ A `requirements.txt` file is provided for ease of development.
 Vendors might want to test their devices against the hardware tests. These
 become immediately accessible when a camera is connected.
 
+To launch tests issue `python setup.py test`.
+
+# Installing
+
+To install issue `pip install .` or `pip install -e .` for developer mode. The
+command `python setup.py install` should also work.
+
 # TODO
 
 - Rearrage classes so transport and extensions can be inherited separately and

@@ -13,5 +13,3 @@ class TestCamera:
         device_info = camera.get_device_info()
         assert device_info, 'There is no response for DeviceInfo.\n'\
             'The camera may not support PTP.'
-        # TODO: Check for mandatory  operations and properties according to PTP
-        # version 1.0 or 1.1

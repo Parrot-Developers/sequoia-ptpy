@@ -9,7 +9,7 @@ class TestCapture(TestCamera):
         device_info = camera.get_device_info()
         print device_info
         if 'InitiateCapture' not in device_info.OperationsSupported:
-            pytest.skip('Capture is not supported by camera.')
+            pytest.skip('InitiateCapture is not supported by camera.')
 
         with camera.session():
             tic = time()

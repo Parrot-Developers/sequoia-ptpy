@@ -176,3 +176,5 @@ class PTPDevice(ptp.PTPDevice):
             self,
             **product_filesystem_types
         )
+
+    # TODO: Implement extension specific operations.

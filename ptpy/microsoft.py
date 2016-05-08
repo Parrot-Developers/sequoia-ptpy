@@ -21,6 +21,16 @@ class PTPDevice(ptp.PTPDevice):
     def _PropertyCode(self, **product_properties):
         return ptp.PTPDevice._PropertyCode(
             self,
+            SynchronizationPartner=0xD401,
+            DeviceFriendlyName=0xD402,
+            Volume=0xD403,
+            SupportedFormatsOrdered=0xD404,
+            DeviceIcon=0xD405,
+            SessionInitiatorVendorInfo=0xD406,
+            PerceivedDeviceType=0xD407,
+            PlaybackRate=0xD410,
+            PlaybackObject=0xD411,
+            PlaybackContainerIndex=0xD412,
             **product_properties
         )
 

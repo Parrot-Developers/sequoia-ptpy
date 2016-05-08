@@ -43,7 +43,7 @@ class TestCompliance(TestCamera):
             'PIMA 15740:2000 requires either pull or push mode.'\
             'Neither is supported.'
 
-    def test_ISO_15740_2000_mandatory(self, device_operations):
+    def test_ISO_15740_2013_mandatory(self, device_operations):
         '''
         Verify mandatory commands as specified by ISO 15740:2013(E)
         '''

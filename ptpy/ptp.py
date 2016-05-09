@@ -776,7 +776,8 @@ class PTPDevice(object):
 
     @contextmanager
     def session(self):
-        '''Manage session with context manager.
+        '''
+        Manage session with context manager.
 
         Once transport specifig interfaces are defined, this allows easier,
         more nuclear sessions:

@@ -65,6 +65,8 @@ class TestGetSetResetProperties(TestCamera):
                 'but then unsupported in ResetDevicePropValue'
             )
             desc = camera.get_device_prop_desc(device_property)
-            assert desc.CurrentValue == desc.FactoryDefaultValue
+            assert desc.CurrentValue == desc.FactoryDefaultValue,\
+                'The value after ResetDevicePropValue '\
+                'and the FactoryDefaultValue differ.'
 
     # TODO: test setting all possible values of all possible properties.

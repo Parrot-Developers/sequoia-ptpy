@@ -794,6 +794,15 @@ class PTPDevice(object):
             if self.__session_open:
                 self.close_session()
 
+    @contextmanager
+    def open_capture(self):
+        '''
+        Manage open capture with context manager.
+
+        This allows easier open capture with automatic closing
+        '''
+        # TODO: implement!
+
     # Transport-specific functions
     # ----------------------------
     def __init__(self):

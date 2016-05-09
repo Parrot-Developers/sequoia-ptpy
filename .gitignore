@@ -3,3 +3,4 @@ cscope.out
 *.egg-info
 .cache
 *.eggs
+*.egg

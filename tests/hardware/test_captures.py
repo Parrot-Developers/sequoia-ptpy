@@ -47,22 +47,26 @@ class TestOpenCapture(TestCamera):
         with camera.session():
             capture = camera.initiate_open_capture()
             # Attempt to close the wrong open capture.
-            wrong_transaction_id = camera.terminate_open_capture(
+            wrong_transaction = camera.terminate_open_capture(
                 capture.TransactionID + 1
             )
-            right_transaction_id = camera.terminate_open_capture(
+            right_transaction = camera.terminate_open_capture(
                 capture.TransactionID
             )
 
-            assert wrong_transaction_id.ResponseCode ==\
+            assert wrong_transaction.ResponseCode ==\
                 'InvalidTransactionID',\
                 \
                 'When terminating the wrong open capture, '\
                 'we expect InvalidTransactionID as ResponseCode.'
 
+            assert right_transaction.ResponseCode != 'InvalidTransactionID',\
+                'The response should never be InvalidTransactionID '\
+                'for the right transaction.'
+
             assert (
-                right_transaction_id.ResponseCode == 'OK' or
-                right_transaction_id.ResponseCode == 'CaptureAlreadyTerminated'
+                right_transaction.ResponseCode == 'OK' or
+                right_transaction.ResponseCode == 'CaptureAlreadyTerminated'
             ),\
                 'When terminating the correct open capture, '\
                 'we expect the session to be successfully closed '\

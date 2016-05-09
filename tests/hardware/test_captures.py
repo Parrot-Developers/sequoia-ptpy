@@ -47,10 +47,10 @@ class TestOpenCapture(TestCamera):
         with camera.session():
             capture = camera.initiate_open_capture()
             # Attempt to close the wrong open capture.
-            right_transaction_id = camera.terminate_open_capture(
+            wrong_transaction_id = camera.terminate_open_capture(
                 capture.TransactionID + 1
             )
-            wrong_transaction_id = camera.terminate_open_capture(
+            right_transaction_id = camera.terminate_open_capture(
                 capture.TransactionID
             )
 

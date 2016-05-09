@@ -112,6 +112,9 @@ class PTPDevice(object):
         '''Return desired endianness for TransactionID'''
         return self._UInt32('TransactionID')
 
+    # TODO: Check if these Enums can be replaced with more general
+    # associations. Or even with Python Enums. Otherwise there is always a risk
+    # of a typo creeping in.
     def _OperationCode(self, **vendor_operations):
         '''Return desired endianness for known OperationCode'''
         return Enum(

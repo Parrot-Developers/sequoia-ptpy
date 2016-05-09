@@ -89,6 +89,8 @@ class TestSequoiaEnableCapture(TestSequoia):
                         acquired += 1
                 # Otherwise if the capture is complete, tally up.
                 elif evt and evt.EventCode == 'CaptureComplete':
+                    if not pytest.config.getoption('--ideal'):
+                        pytest.skip('Use --ideal to check for non-PTP errors.')
                     assert acquired == expected,\
                         '{} images were expected than received. '\
                         'This is not a violation of PTP.'\

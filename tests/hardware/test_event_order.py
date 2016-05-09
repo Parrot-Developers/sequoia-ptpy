@@ -1,13 +1,11 @@
-# TODO Fix import once ptpy module is better structured.
 from time import time
 from test_camera import TestCamera
 import pytest
 
 
 class TestCapture(TestCamera):
-    def test_order(self, camera):
+    def test_event_order(self, camera):
         device_info = camera.get_device_info()
-        print device_info
         if 'InitiateCapture' not in device_info.OperationsSupported:
             pytest.skip('InitiateCapture is not supported by camera.')
 
@@ -37,3 +35,35 @@ class TestCapture(TestCamera):
             )
             assert last_object_added_index < capture_complete_index,\
                 'ObjectAdded happened after CaptureComplete.'
+
+
+class TestOpenCapture(TestCamera):
+    def test_termination(self, camera):
+        '''Verify TerminateOpenCapture behaviour.'''
+        device_info = camera.get_device_info()
+        if 'InitiateOpenCapture' not in device_info.OperationsSupported:
+            pytest.skip('InitiateOpenCapture is not supported by camera.')
+
+        with camera.session():
+            capture = camera.initiate_open_capture()
+            # Attempt to close the wrong open capture.
+            right_transaction_id = camera.terminate_open_capture(
+                capture.TransactionID + 1
+            )
+            wrong_transaction_id = camera.terminate_open_capture(
+                capture.TransactionID
+            )
+
+            assert wrong_transaction_id.ResponseCode ==\
+                'InvalidTransactionID',\
+                \
+                'When terminating the wrong open capture, '\
+                'we expect InvalidTransactionID as ResponseCode.'
+
+            assert (
+                right_transaction_id.ResponseCode == 'OK' or
+                right_transaction_id.ResponseCode == 'CaptureAlreadyTerminated'
+            ),\
+                'When terminating the correct open capture, '\
+                'we expect the session to be successfully closed '\
+                'or already closed.'

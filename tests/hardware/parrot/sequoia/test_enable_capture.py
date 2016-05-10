@@ -51,7 +51,77 @@ def set_valid_mask(sequoia, mask):
     return True
 
 
+def set_keep_on(sequoia, mask):
+    '''Turn masked sensors on'''
+    set_valid_mask(sequoia, mask)
+    tries = 0
+    keep_on = sequoia.get_device_prop_desc('PhotoSensorsKeepOn')
+    while keep_on.CurrentValue != 1 and tries < 10:
+        tries += 1
+        sleep(1)
+        sequoia.set_device_prop_value(
+            'PhotoSensorsKeepOn',
+            sequoia._UInt32('KeepOn').build(1)
+        )
+        keep_on = sequoia.get_device_prop_desc('PhotoSensorsKeepOn')
+    assert keep_on.CurrentValue == 1, \
+        'Could not turn sensors on after 10 tries (10 s).'
+
+
+def unset_keep_on(sequoia):
+    '''Turn masked sensors on'''
+    tries = 0
+    keep_on = sequoia.get_device_prop_desc('PhotoSensorsKeepOn')
+    while keep_on.CurrentValue != 0 and tries < 10:
+        tries += 1
+        sleep(1)
+        sequoia.set_device_prop_value(
+            'PhotoSensorsKeepOn',
+            sequoia._UInt32('KeepOn').build(0)
+        )
+        keep_on = sequoia.get_device_prop_desc('PhotoSensorsKeepOn')
+    assert keep_on.CurrentValue == 0, \
+        'Could not turn sensors off after 10 tries (10 s).'
+
+
 class TestSequoiaEnableCapture(TestSequoia):
+    def test_keep_on(self, sequoia):
+        '''Verify a PhotoSensorsKeepOn does not block the Sequoia.'''
+        with sequoia.session():
+            set_keep_on(sequoia, 31)
+            unset_keep_on(sequoia)
+
+    def test_keep_on_capture(self, sequoia):
+        '''Verify that a capture with N enabled sensors poduces N images.'''
+
+        with sequoia.session():
+
+            # Capture image and wait for CaptureComplete
+            set_keep_on(sequoia, 31)
+            capture = initiate_capture(sequoia)
+
+            tic = time()
+            while True:
+                evt = sequoia.event()
+                if (
+                        evt and
+                        evt.EventCode == 'CaptureComplete' and
+                        evt.TransactionID == capture.TransactionID
+                ):
+                    break
+                assert time() - tic <= 40,\
+                    'Waited for 40 seconds before giving up.\n'\
+                    'No CaptureComplete received for InitiateCapture.'
+
+            keep_on = sequoia.get_device_prop_desc('PhotoSensorsKeepOn')
+            if keep_on.CurrentValue == 1:
+                sequoia.set_device_prop_value(
+                    'PhotoSensorsKeepOn',
+                    sequoia._UInt32('KeepOn').build(0)
+                )
+                sleep(5)
+            unset_keep_on(sequoia)
+
     @pytest.mark.parametrize(
         ('mask'),
         range(2**number_of_cameras),
@@ -60,6 +130,12 @@ class TestSequoiaEnableCapture(TestSequoia):
         '''Verify that a capture with N enabled sensors poduces N images.'''
 
         with sequoia.session():
+            keep_on = sequoia.get_device_prop_desc('PhotoSensorsKeepOn')
+            if keep_on.CurrentValue == 1:
+                sequoia.set_device_prop_value(
+                    'PhotoSensorsKeepOn',
+                    sequoia._UInt32('KeepOn').build(0)
+                )
 
             # If mask is invalid, skip.
             if not set_valid_mask(sequoia, mask):

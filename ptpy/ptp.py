@@ -752,7 +752,7 @@ class PTPDevice(object):
     def __transaction(self):
         '''Give magical property for the latest TransactionID'''
         current_id = 0
-        if __session_open:
+        if self.__session_open:
             current_id = self.__transaction_id
             self.__transaction_id += 1
             if self.__transaction_id > 0xFFFFFFFE:

@@ -46,5 +46,3 @@ command `python setup.py install` should also work.
 - Write top-level class to deal with extensions automatically from
   `device_info`
 - Implement extension mapped codes from PTP1.1
-- Make sure all tests can be run together (Clean up references to cameras from
-  other tests)

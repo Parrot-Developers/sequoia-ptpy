@@ -14,8 +14,8 @@ from usb.util import (
 from ptp import PTPError
 from parrot import PTPDevice
 from construct import (
-    Array, Bytes, Container, Embedded, Enum, ExprAdapter, FieldError, Range,
-    Struct, ULInt16, ULInt32,
+    Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
+    ULInt16, ULInt32,
 )
 from multiprocessing import Process, Queue, Lock
 

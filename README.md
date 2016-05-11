@@ -26,6 +26,7 @@ properties.
 # Requirements
 
 A `requirements.txt` file is provided for ease of development.
+For developing tests, a separate `tests/requirements.txt` is provided.
 
 # Tests
 

@@ -10,13 +10,6 @@ except Exception:
     pass
 
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--ideal", action="store_true",
-        help="Check also for problems that are beyond ISO 15740:2013(EN)"
-    )
-
-
 # Use the same camera for a testing session. And skip all tests that use it.
 @pytest.fixture(scope='session', autouse=True)
 def camera():

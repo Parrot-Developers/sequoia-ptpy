@@ -92,7 +92,7 @@ class TestSequoiaEnableCapture(TestSequoia):
             unset_keep_on(sequoia)
 
     def test_keep_on_capture(self, sequoia):
-        '''Verify that a capture with N enabled sensors poduces N images.'''
+        '''Verify that a capture finishes with sensors on.'''
 
         with sequoia.session():
 

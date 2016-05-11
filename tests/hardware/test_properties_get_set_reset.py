@@ -1,5 +1,5 @@
 from test_camera import TestCamera
-
+from construct import Value, Rename, Struct
 
 def assert_response_code_different(response, value, reason):
     'Check that the code of a response is not value.'
@@ -68,5 +68,26 @@ class TestGetSetResetProperties(TestCamera):
             assert desc.CurrentValue == desc.FactoryDefaultValue,\
                 'The value after ResetDevicePropValue '\
                 'and the FactoryDefaultValue differ.'
+
+    def test_desc_get_property_identical(self, camera, device_property):
+        '''
+        Check property description and property get share the same value.
+
+        GetDevicePropValue == GetDevicePropDesc.CurrentValue
+        '''
+        with camera.session():
+            value = camera.get_device_prop_value(device_property)
+            desc = camera.get_device_prop_desc(device_property)
+            # TODO: refactor this into PTPy core to automatically parse and
+            # build properties for which a GetDevicePropDesc has been issued.
+            builder = Struct(
+                'Builder',
+                Value('DataTypeCode', lambda ctx: desc.DataTypeCode),
+                Rename('CurrentValue', camera._DataType)
+                )
+            data = builder.build(desc)
+            assert value.Data == data,\
+                'GetDevicePropDesc.CurrentValue and '\
+                'GetDevicePropValue should match.'
 
     # TODO: test setting all possible values of all possible properties.

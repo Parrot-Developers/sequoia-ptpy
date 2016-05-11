@@ -5,6 +5,8 @@ implementation are Vendor agnostic. Vendor extensions should extend these to
 support more operations.
 '''
 import usb.core
+import signal
+import sys
 from usb.util import (
     endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK, ENDPOINT_TYPE_INTR,
     ENDPOINT_OUT, ENDPOINT_IN,
@@ -15,6 +17,8 @@ from construct import (
     Array, Bytes, Container, Embedded, Enum, ExprAdapter, FieldError, Range,
     Struct, ULInt16, ULInt32,
 )
+from multiprocessing import Process, Queue, Lock
+
 
 __all__ = ('USBTransport', 'find_usb_cameras')
 __author__ = 'Luis Mario Domenzain'
@@ -72,6 +76,17 @@ class USBTransport(PTPDevice):
                         'Maybe the camera is mounted?'
                         )
         usb.util.claim_interface(self.__dev, self.__intf)
+        self.__event_queue = Queue()
+        self.__recv_lock = Lock()
+        self.__event_proc = Process(target=self.__poll_events)
+        self.__event_proc.start()
+        signal.signal(signal.SIGTERM, self.__handler)
+        signal.signal(signal.SIGINT, self.__handler)
+
+    def __handler(self, signum, frame):
+        if self.__event_proc.is_alive():
+            self.__event_proc.terminate()
+        sys.exit()
 
     # Helper methods.
     # ---------------------
@@ -334,7 +349,18 @@ class USBTransport(PTPDevice):
 
         If `wait` this function is blocking. Otherwise it may return None.
         '''
-        return self.__recv(event=True, wait=wait)
+        evt = None
+        timeout = None if wait else 0.001
+        if not self.__event_queue.empty():
+            evt = self.__event_queue.get(block=not wait, timeout=timeout)
+        return evt
+
+    def __poll_events(self):
+        '''Poll events, adding them to a queue.'''
+        while True:
+            evt = self.__recv(event=True, wait=False)
+            if evt is not None:
+                self.__event_queue.put(evt)
 
 
 if __name__ == "__main__":

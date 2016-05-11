@@ -746,26 +746,28 @@ class PTPDevice(object):
     # -------------------------------
     __session = 0
     __session_open = False
-    __transaction_id = 0
+    __transaction_id = 1
 
     @property
     def __transaction(self):
         '''Give magical property for the latest TransactionID'''
-        current_id = self.__transaction_id
-        self.__transaction_id += 1
-        if self.__transaction_id > 0xFFFFFFFE:
-            self.__transaction_id = 1
+        current_id = 0
+        if __session_open:
+            current_id = self.__transaction_id
+            self.__transaction_id += 1
+            if self.__transaction_id > 0xFFFFFFFE:
+                self.__transaction_id = 1
         return current_id
 
     @__transaction.setter
     def __transaction(self, value):
         '''Manage reset of TransactionID'''
-        if value != 0:
+        if value != 1:
             raise PTPError(
                 'Current TransactionID should not be set. Only reset.'
             )
         else:
-            self.__transaction_id = 0
+            self.__transaction_id = 1
 
     @property
     def session_id(self):
@@ -857,13 +859,13 @@ class PTPDevice(object):
 
     def open_session(self):
         self.__session += 1
-        self.__transaction = 0
+        self.__transaction = 1
         ptp = Container(
             OperationCode='OpenSession',
             # Only the OpenSession operation is allowed to have a 0
             # SessionID, because no session is open yet.
             SessionID=0,
-            TransactionID=self.__transaction,
+            TransactionID=0,
             Parameter=[self.__session]
         )
         response = self.mesg(ptp)

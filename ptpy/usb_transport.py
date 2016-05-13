@@ -83,15 +83,6 @@ class USBTransport(PTPDevice):
         self.__event_proc.daemon = True
         self.__event_proc.start()
 
-    @contextmanager
-    def __usb(self):
-        '''Automatically manage access to USB ressource.'''
-        try:
-            self.__usb_lock.acquire()
-            yield
-        finally:
-            self.__usb_lock.release()
-
     # Helper methods.
     # ---------------------
     def __setup_device(self, dev):
@@ -250,7 +241,7 @@ class USBTransport(PTPDevice):
 
     def __recv(self, event=False, wait=False, raw=False):
         '''Helper method for receiving non-event data.'''
-        with self.__usb():
+        with self.__usb_lock:
             ep = self.__intep if event else self.__inep
             try:
                 usbdata = ep.read(ep.wMaxPacketSize, timeout=0 if wait else 5)
@@ -287,7 +278,7 @@ class USBTransport(PTPDevice):
 
     def __send(self, ptp_container, event=False):
         '''Helper method for sending data.'''
-        with self.__usb():
+        with self.__usb_lock:
             ep = self.__intep if event else self.__outep
             transaction = self.__CommandTransaction.build(ptp_container)
             try:

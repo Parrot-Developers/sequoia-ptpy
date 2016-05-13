@@ -5,6 +5,8 @@ implementation are Vendor agnostic. Vendor extensions should extend these to
 support more operations.
 '''
 import usb.core
+import sys
+import signal
 from usb.util import (
     endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK, ENDPOINT_TYPE_INTR,
     ENDPOINT_OUT, ENDPOINT_IN,
@@ -12,9 +14,12 @@ from usb.util import (
 from ptp import PTPError
 from parrot import PTPDevice
 from construct import (
-    Array, Bytes, Container, Embedded, Enum, ExprAdapter, FieldError, Range,
-    Struct, ULInt16, ULInt32,
+    Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
+    ULInt16, ULInt32,
 )
+from multiprocessing import Process, Queue, Lock
+from contextlib import contextmanager
+
 
 __all__ = ('USBTransport', 'find_usb_cameras')
 __author__ = 'Luis Mario Domenzain'
@@ -72,6 +77,20 @@ class USBTransport(PTPDevice):
                         'Maybe the camera is mounted?'
                         )
         usb.util.claim_interface(self.__dev, self.__intf)
+        self.__event_queue = Queue()
+        self.__usb_lock = Lock()
+        self.__event_proc = Process(target=self.__poll_events)
+        self.__event_proc.daemon = True
+        self.__event_proc.start()
+
+    @contextmanager
+    def __usb(self):
+        '''Automatically manage access to USB ressource.'''
+        try:
+            self.__usb_lock.acquire()
+            yield
+        finally:
+            self.__usb_lock.release()
 
     # Helper methods.
     # ---------------------
@@ -204,38 +223,8 @@ class USBTransport(PTPDevice):
                 decoder=lambda obj, ctx: obj,
                 )
 
-    def __recv(self, event=False, wait=False):
-        '''Helper method for receiving non-event data.'''
-        ep = self.__intep if event else self.__inep
-        try:
-            usbdata = ep.read(ep.wMaxPacketSize, timeout=0 if wait else 5)
-        except usb.core.USBError as e:
-            # Ignore timeout or busy device once.
-            if e.errno == 110 or e.errno == 16:
-                if event:
-                    return None
-                else:
-                    usbdata = ep.read(
-                        ep.wMaxPacketSize,
-                        timeout=5000
-                    )
-            else:
-                raise e
-        header = self.__ResponseHeader.parse(usbdata[0:self.__Header.sizeof()])
-        command = self.__CommandHeader.parse(usbdata[0:self.__Header.sizeof()])
-        event = self.__EventHeader.parse(usbdata[0:self.__Header.sizeof()])
-        if header.Type not in ['Response', 'Data', 'Event']:
-            raise PTPError(
-                'Unexpected USB transfer type.'
-                'Expected Response, Event or Data but reveived {}'
-                .format(header.Type)
-            )
-        while len(usbdata) < header.Length:
-            usbdata += ep.read(
-                ep.wMaxPacketSize,
-                timeout=5000
-            )
-
+    def __parse_response(self, usbdata):
+        '''Helper method for parsing USB data.'''
         # Build up container with all PTP info.
         transaction = self.__ResponseTransaction.parse(usbdata)
         response = Container(
@@ -246,23 +235,67 @@ class USBTransport(PTPDevice):
             response['ResponseCode'] = transaction.ResponseCode
             response['Parameter'] = self.__Param.parse(transaction.Payload)
         elif transaction.Type == 'Event':
+            event = self.__EventHeader.parse(
+                usbdata[0:self.__Header.sizeof()]
+            )
             response['EventCode'] = event.EventCode
             response['Parameter'] = self.__Param.parse(transaction.Payload)
         else:
+            command = self.__CommandHeader.parse(
+                usbdata[0:self.__Header.sizeof()]
+            )
             response['OperationCode'] = command.OperationCode
             response['Data'] = transaction.Payload
         return response
 
+    def __recv(self, event=False, wait=False, raw=False):
+        '''Helper method for receiving non-event data.'''
+        with self.__usb():
+            ep = self.__intep if event else self.__inep
+            try:
+                usbdata = ep.read(ep.wMaxPacketSize, timeout=0 if wait else 5)
+            except usb.core.USBError as e:
+                # Ignore timeout or busy device once.
+                if e.errno == 110 or e.errno == 16:
+                    if event:
+                        return None
+                    else:
+                        usbdata = ep.read(
+                            ep.wMaxPacketSize,
+                            timeout=5000
+                        )
+                else:
+                    raise e
+            header = self.__ResponseHeader.parse(
+                usbdata[0:self.__Header.sizeof()]
+            )
+            if header.Type not in ['Response', 'Data', 'Event']:
+                raise PTPError(
+                    'Unexpected USB transfer type.'
+                    'Expected Response, Event or Data but reveived {}'
+                    .format(header.Type)
+                )
+            while len(usbdata) < header.Length:
+                usbdata += ep.read(
+                    ep.wMaxPacketSize,
+                    timeout=5000
+                )
+        if raw:
+            return usbdata
+        else:
+            return self.__parse_response(usbdata)
+
     def __send(self, ptp_container, event=False):
         '''Helper method for sending data.'''
-        ep = self.__intep if event else self.__outep
-        transaction = self.__CommandTransaction.build(ptp_container)
-        try:
-            ep.write(transaction, timeout=1)
-        except usb.core.USBError as e:
-            # Ignore timeout or busy device once.
-            if e.errno == 110 or e.errno == 16:
-                ep.write(transaction, timeout=5000)
+        with self.__usb():
+            ep = self.__intep if event else self.__outep
+            transaction = self.__CommandTransaction.build(ptp_container)
+            try:
+                ep.write(transaction, timeout=1)
+            except usb.core.USBError as e:
+                # Ignore timeout or busy device once.
+                if e.errno == 110 or e.errno == 16:
+                    ep.write(transaction, timeout=5000)
 
     def __send_request(self, ptp_container):
         '''Send PTP request without checking answer.'''
@@ -334,7 +367,22 @@ class USBTransport(PTPDevice):
 
         If `wait` this function is blocking. Otherwise it may return None.
         '''
-        return self.__recv(event=True, wait=wait)
+        evt = None
+        usbdata = None
+        timeout = None if wait else 0.001
+        if not self.__event_queue.empty():
+            usbdata = self.__event_queue.get(block=not wait, timeout=timeout)
+        if usbdata is not None:
+            evt = self.__parse_response(usbdata)
+
+        return evt
+
+    def __poll_events(self):
+        '''Poll events, adding them to a queue.'''
+        while True:
+            evt = self.__recv(event=True, wait=False, raw=True)
+            if evt is not None:
+                self.__event_queue.put(evt)
 
 
 if __name__ == "__main__":

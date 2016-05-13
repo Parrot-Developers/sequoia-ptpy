@@ -223,7 +223,32 @@ class USBTransport(PTPDevice):
                 decoder=lambda obj, ctx: obj,
                 )
 
-    def __recv(self, event=False, wait=False):
+    def __parse_response(self, usbdata):
+        '''Helper method for parsing USB data.'''
+        # Build up container with all PTP info.
+        transaction = self.__ResponseTransaction.parse(usbdata)
+        response = Container(
+            SessionID=self.session_id,
+            TransactionID=transaction.TransactionID,
+        )
+        if transaction.Type == 'Response':
+            response['ResponseCode'] = transaction.ResponseCode
+            response['Parameter'] = self.__Param.parse(transaction.Payload)
+        elif transaction.Type == 'Event':
+            event = self.__EventHeader.parse(
+                usbdata[0:self.__Header.sizeof()]
+            )
+            response['EventCode'] = event.EventCode
+            response['Parameter'] = self.__Param.parse(transaction.Payload)
+        else:
+            command = self.__CommandHeader.parse(
+                usbdata[0:self.__Header.sizeof()]
+            )
+            response['OperationCode'] = command.OperationCode
+            response['Data'] = transaction.Payload
+        return response
+
+    def __recv(self, event=False, wait=False, raw=False):
         '''Helper method for receiving non-event data.'''
         with self.__usb():
             ep = self.__intep if event else self.__inep
@@ -244,12 +269,6 @@ class USBTransport(PTPDevice):
             header = self.__ResponseHeader.parse(
                 usbdata[0:self.__Header.sizeof()]
             )
-            command = self.__CommandHeader.parse(
-                usbdata[0:self.__Header.sizeof()]
-            )
-            event = self.__EventHeader.parse(
-                usbdata[0:self.__Header.sizeof()]
-            )
             if header.Type not in ['Response', 'Data', 'Event']:
                 raise PTPError(
                     'Unexpected USB transfer type.'
@@ -261,23 +280,10 @@ class USBTransport(PTPDevice):
                     ep.wMaxPacketSize,
                     timeout=5000
                 )
-
-        # Build up container with all PTP info.
-        transaction = self.__ResponseTransaction.parse(usbdata)
-        response = Container(
-            SessionID=self.session_id,
-            TransactionID=transaction.TransactionID,
-        )
-        if transaction.Type == 'Response':
-            response['ResponseCode'] = transaction.ResponseCode
-            response['Parameter'] = self.__Param.parse(transaction.Payload)
-        elif transaction.Type == 'Event':
-            response['EventCode'] = event.EventCode
-            response['Parameter'] = self.__Param.parse(transaction.Payload)
+        if raw:
+            return usbdata
         else:
-            response['OperationCode'] = command.OperationCode
-            response['Data'] = transaction.Payload
-        return response
+            return self.__parse_response(usbdata)
 
     def __send(self, ptp_container, event=False):
         '''Helper method for sending data.'''
@@ -362,15 +368,19 @@ class USBTransport(PTPDevice):
         If `wait` this function is blocking. Otherwise it may return None.
         '''
         evt = None
+        usbdata = None
         timeout = None if wait else 0.001
         if not self.__event_queue.empty():
-            evt = self.__event_queue.get(block=not wait, timeout=timeout)
+            usbdata = self.__event_queue.get(block=not wait, timeout=timeout)
+        if usbdata is not None:
+            evt = self.__parse_response(usbdata)
+
         return evt
 
     def __poll_events(self):
         '''Poll events, adding them to a queue.'''
         while True:
-            evt = self.__recv(event=True, wait=False)
+            evt = self.__recv(event=True, wait=False, raw=True)
             if evt is not None:
                 self.__event_queue.put(evt)
 

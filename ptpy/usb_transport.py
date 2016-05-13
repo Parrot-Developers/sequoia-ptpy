@@ -80,10 +80,8 @@ class USBTransport(PTPDevice):
         self.__event_queue = Queue()
         self.__usb_lock = Lock()
         self.__event_proc = Process(target=self.__poll_events)
+        self.__event_proc.daemon = True
         self.__event_proc.start()
-        signal.signal(signal.SIGTERM, self.__handler)
-        signal.signal(signal.SIGINT, self.__handler)
-        signal.signal(signal.SIGHUP, self.__handler)
 
     @contextmanager
     def __usb(self):
@@ -93,11 +91,6 @@ class USBTransport(PTPDevice):
             yield
         finally:
             self.__usb_lock.release()
-
-    def __handler(self, signum, frame):
-        if self.__event_proc.is_alive():
-            self.__event_proc.terminate()
-        sys.exit()
 
     # Helper methods.
     # ---------------------

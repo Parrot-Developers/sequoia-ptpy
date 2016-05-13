@@ -87,13 +87,28 @@ class PTPDevice(ptp.PTPDevice):
             **product_filesystem_types
         )
 
-    # TODO: Nicer decoding of Sunshine.
     def _Sunshine(self):
-        return self._PTPArray('Sunshine', self._UInt32('Int'))
+        return ExprAdapter(
+            self._PTPArray('Sunshine', self._UInt32('Int')),
+            encoder=lambda obj, ctx: [
+                obj.Green, obj.Red, obj.RedEdge, obj.NIR,
+            ],
+            decoder=lambda obj, ctx: Container(
+                Green=obj[0], Red=obj[1], RedEdge=obj[2], NIR=obj[3],
+            ),
+        )
 
-    # TODO: Nicer decoding of Temperature.
     def _Temperature(self):
-        return self._PTPArray('Temperature', self._UInt32('Int'))
+        return ExprAdapter(
+            self._PTPArray('Temperature', self._UInt32('Int')),
+            encoder=lambda obj, ctx: [
+                obj.P7, obj.P7MU, obj.DDR. obj.WiFi, obj.IMU, obj.IMUSunshine
+            ],
+            decoder=lambda obj, ctx: Container(
+                P7=obj[0], P7MU=obj[1], DDR=obj[2],
+                WiFi=obj[3], IMU=obj[4], IMUSunshine=obj[5],
+            ),
+        )
 
     def _Angle(self):
         return ExprAdapter(

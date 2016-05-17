@@ -241,6 +241,8 @@ class USBTransport(PTPDevice):
 
     def __recv(self, event=False, wait=False, raw=False):
         '''Helper method for receiving non-event data.'''
+        # TODO: Refactor USB endpoint reads to lock separately on different
+        # endpoints. And to clear stalls.
         with self.__usb_lock:
             ep = self.__intep if event else self.__inep
             try:

@@ -100,7 +100,7 @@ class PTPDevice(ptp.PTPDevice):
 
     def _Temperature(self):
         return ExprAdapter(
-            self._PTPArray('Temperature', self._UInt32('Int')),
+            self._PTPArray('Temperature', self._Int32('Int')),
             encoder=lambda obj, ctx: [
                 obj.P7, obj.P7MU, obj.DDR. obj.WiFi, obj.IMU, obj.IMUSunshine
             ],

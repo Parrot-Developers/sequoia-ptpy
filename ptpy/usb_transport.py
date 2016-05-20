@@ -5,8 +5,6 @@ implementation are Vendor agnostic. Vendor extensions should extend these to
 support more operations.
 '''
 import usb.core
-import sys
-import signal
 from usb.util import (
     endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK, ENDPOINT_TYPE_INTR,
     ENDPOINT_OUT, ENDPOINT_IN,
@@ -17,8 +15,8 @@ from construct import (
     Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
     ULInt16, ULInt32,
 )
-from multiprocessing import Process, Queue, Lock
-from contextlib import contextmanager
+from threading import Thread, Lock
+from Queue import Queue
 
 
 __all__ = ('USBTransport', 'find_usb_cameras')
@@ -78,8 +76,7 @@ class USBTransport(PTPDevice):
                         )
         usb.util.claim_interface(self.__dev, self.__intf)
         self.__event_queue = Queue()
-        self.__usb_lock = Lock()
-        self.__event_proc = Process(target=self.__poll_events)
+        self.__event_proc = Thread(target=self.__poll_events)
         self.__event_proc.daemon = True
         self.__event_proc.start()
 
@@ -241,38 +238,36 @@ class USBTransport(PTPDevice):
 
     def __recv(self, event=False, wait=False, raw=False):
         '''Helper method for receiving non-event data.'''
-        # TODO: Refactor USB endpoint reads to lock separately on different
-        # endpoints. And to clear stalls.
-        with self.__usb_lock:
-            ep = self.__intep if event else self.__inep
-            try:
-                usbdata = ep.read(ep.wMaxPacketSize, timeout=0 if wait else 5)
-            except usb.core.USBError as e:
-                # Ignore timeout or busy device once.
-                if e.errno == 110 or e.errno == 16:
-                    if event:
-                        return None
-                    else:
-                        usbdata = ep.read(
-                            ep.wMaxPacketSize,
-                            timeout=5000
-                        )
+        # TODO: clear stalls automatically
+        ep = self.__intep if event else self.__inep
+        try:
+            usbdata = ep.read(ep.wMaxPacketSize, timeout=0 if wait else 5)
+        except usb.core.USBError as e:
+            # Ignore timeout or busy device once.
+            if e.errno == 110 or e.errno == 16:
+                if event:
+                    return None
                 else:
-                    raise e
-            header = self.__ResponseHeader.parse(
-                usbdata[0:self.__Header.sizeof()]
+                    usbdata = ep.read(
+                        ep.wMaxPacketSize,
+                        timeout=5000
+                    )
+            else:
+                raise e
+        header = self.__ResponseHeader.parse(
+            usbdata[0:self.__Header.sizeof()]
+        )
+        if header.Type not in ['Response', 'Data', 'Event']:
+            raise PTPError(
+                'Unexpected USB transfer type.'
+                'Expected Response, Event or Data but reveived {}'
+                .format(header.Type)
             )
-            if header.Type not in ['Response', 'Data', 'Event']:
-                raise PTPError(
-                    'Unexpected USB transfer type.'
-                    'Expected Response, Event or Data but reveived {}'
-                    .format(header.Type)
-                )
-            while len(usbdata) < header.Length:
-                usbdata += ep.read(
-                    ep.wMaxPacketSize,
-                    timeout=5000
-                )
+        while len(usbdata) < header.Length:
+            usbdata += ep.read(
+                ep.wMaxPacketSize,
+                timeout=5000
+            )
         if raw:
             return usbdata
         else:
@@ -280,15 +275,14 @@ class USBTransport(PTPDevice):
 
     def __send(self, ptp_container, event=False):
         '''Helper method for sending data.'''
-        with self.__usb_lock:
-            ep = self.__intep if event else self.__outep
-            transaction = self.__CommandTransaction.build(ptp_container)
-            try:
-                ep.write(transaction, timeout=1)
-            except usb.core.USBError as e:
-                # Ignore timeout or busy device once.
-                if e.errno == 110 or e.errno == 16:
-                    ep.write(transaction, timeout=5000)
+        ep = self.__intep if event else self.__outep
+        transaction = self.__CommandTransaction.build(ptp_container)
+        try:
+            ep.write(transaction, timeout=1)
+        except usb.core.USBError as e:
+            # Ignore timeout or busy device once.
+            if e.errno == 110 or e.errno == 16:
+                ep.write(transaction, timeout=5000)
 
     def __send_request(self, ptp_container):
         '''Send PTP request without checking answer.'''

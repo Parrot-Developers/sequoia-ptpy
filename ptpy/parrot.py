@@ -44,6 +44,8 @@ class PTPDevice(ptp.PTPDevice):
             MultisensorsExposureTime=0xD214,
             MultisensorsExposureProgramMode=0xD215,
             MultisensorsExposureIndex=0xD216,
+            MultisensorsIrradianceGain=0xD217,
+            MultisensorsIrradianceIntegrationTime=0xD218,
             **product_properties
         )
 

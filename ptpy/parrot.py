@@ -46,6 +46,7 @@ class PTPDevice(ptp.PTPDevice):
             MultisensorsExposureIndex=0xD216,
             MultisensorsIrradianceGain=0xD217,
             MultisensorsIrradianceIntegrationTime=0xD218,
+            OverlapRate=0xD219,
             **product_properties
         )
 

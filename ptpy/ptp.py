@@ -791,6 +791,8 @@ class PTPDevice(object):
             with ptp.session():
                 ptp.get_device_info()
         '''
+        # TODO: Deal with devices that only support one session (where
+        # SessionID must be always 1)
         try:
             if not self.__session_open:
                 self.open_session()
@@ -840,10 +842,24 @@ class PTPDevice(object):
 
     # Operation-specific methods and helpers
     # --------------------------------------
+    __has_the_knowledge = False
+
     def __parse_if_data(self, response, constructor):
         '''If the response contains data, parse it with constructor.'''
         return (constructor.parse(response.Data)
                 if hasattr(response, 'Data') else None)
+
+    def __name(self, name_or_code, constructor):
+        '''Helper method to get the code for an Enum constructor.'''
+        if isinstance(name_or_code, int):
+            try:
+                name = constructor.decoding[name_or_code]
+            except Exception:
+                raise PTPError('Unknown property code. Try with a name?')
+        else:
+            name = name_or_code
+
+        return name
 
     def __code(self, name_or_code, constructor):
         '''Helper method to get the code for an Enum constructor.'''
@@ -856,6 +872,20 @@ class PTPDevice(object):
             code = name_or_code
 
         return code
+
+    def _obtain_the_knowledge(self):
+        '''Initialise an internal representation of device behaviour.'''
+        self.__device_info = self.get_device_info()
+        self.__prop_desc = {}
+        with self.session():
+            for p in self.__device_info.DevicePropertiesSupported:
+                # TODO: Update __prop_desc with arrival of events
+                # transparently.
+                self.__prop_desc[p] = self.get_device_prop_desc(p)
+                # TODO: Get info regarding ObjectHandles here. And update as
+                # events are received. This should be transparent for the user.
+
+        self.__has_the_knowledge = True
 
     def open_session(self):
         self.__session += 1
@@ -1028,6 +1058,7 @@ class PTPDevice(object):
         Accepts a property name of a number.
         '''
         code = self.__code(device_property, self._PropertyCode)
+        device_property = self.__name(device_property, self._PropertyCode)
 
         ptp = Container(
             OperationCode='GetDevicePropDesc',
@@ -1036,7 +1067,11 @@ class PTPDevice(object):
             Parameter=[code]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._DevicePropDesc)
+        result = self.__parse_if_data(response, self._DevicePropDesc)
+        # Update the knowledge on response.
+        if self.__has_the_knowledge and hasattr(response, 'Data'):
+            self.__prop_desc[device_property] = result
+        return result
 
     def get_device_prop_value(self, device_property):
         code = self.__code(device_property, self._PropertyCode)
@@ -1053,8 +1088,7 @@ class PTPDevice(object):
         # return self.__parse_if_data(response, self._DevicePropValue)
 
     def set_device_prop_value(self, device_property, value_payload):
-        # TODO: Manage building of value payloads automatically from previous
-        # GetDevicePropDesc
+        # TODO: Manage building of value payloads automatically using self.__prop_desc
         code = self.__code(device_property, self._PropertyCode)
 
         ptp = Container(

@@ -377,7 +377,7 @@ class PTPDevice(ptp.PTPDevice):
 
     def send_firmware(self, firmware):
         ptp = Container(
-            OperationCode='MagnetoCalibStatus',
+            OperationCode='SendFirmwareUpdate',
             SessionID=self.__session,
             TransactionID=self.__transaction,
             Parameter=[]

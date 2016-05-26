@@ -15,7 +15,7 @@ from construct import (
     LengthValueAdapter, Pass, PrefixedArray, Rename, SBInt16, SBInt32, SBInt64,
     SBInt8, Sequence, SLInt16, SLInt32, SLInt64, SLInt8, SNInt16, SNInt32,
     SNInt64, SNInt8, Struct, Switch, UBInt16, UBInt32, UBInt64, UBInt8,
-    ULInt16, ULInt32, ULInt64, ULInt8, UNInt16, UNInt32, UNInt64, UNInt8,
+    ULInt16, ULInt32, ULInt64, ULInt8, UNInt16, UNInt32, UNInt64, UNInt8, Value
     )
 from contextlib import contextmanager
 from dateutil.parser import parse as iso8601
@@ -1052,6 +1052,18 @@ class PTPDevice(object):
             self._PTPArray('ObjectHandles', self._ObjectHandle)
         )
 
+    def __constructor(self, device_property):
+        '''Get the correct constructor using the latest GetDevicePropDesc.'''
+        builder = Struct(
+            'Builder',
+            Value(
+                'DataTypeCode',
+                lambda ctx: self.__prop_desc[device_property].DataTypeCode
+            ),
+            Rename('Value', self._DataType)
+        )
+        return builder
+
     def get_device_prop_desc(self, device_property):
         '''Retrieve the property description.
 
@@ -1075,6 +1087,7 @@ class PTPDevice(object):
 
     def get_device_prop_value(self, device_property):
         code = self.__code(device_property, self._PropertyCode)
+        device_property = self.__name(device_property, self._PropertyCode)
 
         ptp = Container(
             OperationCode='GetDevicePropValue',
@@ -1083,13 +1096,16 @@ class PTPDevice(object):
             Parameter=[code],
         )
         response = self.recv(ptp)
+        if self.__has_the_knowledge and hasattr(response, 'Data'):
+            c = self.__constructor(device_property)
+            response = c.parse(response.Data).Value
         return response
-        # TODO: Parse property automatically after a get_device_prop_desc
-        # return self.__parse_if_data(response, self._DevicePropValue)
 
     def set_device_prop_value(self, device_property, value_payload):
-        # TODO: Manage building of value payloads automatically using self.__prop_desc
+        # TODO: Manage building of value payloads automatically using
+        # self.__prop_desc
         code = self.__code(device_property, self._PropertyCode)
+        device_property = self.__name(device_property, self._PropertyCode)
 
         ptp = Container(
             OperationCode='SetDevicePropValue',

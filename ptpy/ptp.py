@@ -793,13 +793,15 @@ class PTPDevice(object):
         '''
         # TODO: Deal with devices that only support one session (where
         # SessionID must be always 1)
-        try:
-            if not self.__session_open:
+        if not self.__session_open:
+            try:
                 self.open_session()
+                yield
+            finally:
+                if self.__session_open:
+                    self.close_session()
+        else:
             yield
-        finally:
-            if self.__session_open:
-                self.close_session()
 
     @contextmanager
     def open_capture(self):

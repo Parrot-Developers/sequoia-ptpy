@@ -1,10 +1,19 @@
 from test_camera import TestCamera
 from construct import Value, Rename, Struct
 
+
 def assert_response_code_different(response, value, reason):
     'Check that the code of a response is not value.'
     try:
         assert response.ResponseCode != value, reason
+    except AttributeError:
+        pass
+
+
+def assert_response_code_equal(response, value, reason):
+    'Check that the code of a response is not value.'
+    try:
+        assert response.ResponseCode == value, reason
     except AttributeError:
         pass
 
@@ -47,12 +56,18 @@ class TestGetSetResetProperties(TestCamera):
             )
 
             if desc.GetSet == 'Get':
-                assert set_response.ResponseCode == 'AccessDenied',\
-                    'A get-only property should return'\
-                    ' AccessDenied on SetDevicePropValue.'
+                assert_response_code_equal(
+                    set_response,
+                    'AccessDenied',
+                    'A get-only property should return '
+                    'AccessDenied on SetDevicePropValue.'
+                )
             else:
-                assert set_response.ResponseCode != 'AccessDenied',\
+                assert_response_code_different(
+                    set_response,
+                    'AccessDenied',
                     'The property is reported as GetSet but access is denied.'
+                )
 
     def test_reset_property(self, camera, device_property):
         '''Set property to their current value to check for writability'''

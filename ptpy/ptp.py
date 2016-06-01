@@ -1104,10 +1104,20 @@ class PTPDevice(object):
         return response
 
     def set_device_prop_value(self, device_property, value_payload):
-        # TODO: Manage building of value payloads automatically using
-        # self.__prop_desc
         code = self.__code(device_property, self._PropertyCode)
         device_property = self.__name(device_property, self._PropertyCode)
+
+        # Attempt to use current knowledge of properties
+        if self.__has_the_knowledge:
+            c = self.__constructor(device_property)
+            value_payload = c.build(
+                Container(
+                    Value=value_payload,
+                    DataTypeCode=(
+                        self.__prop_desc[device_property].DataTypeCode
+                    )
+                )
+            )
 
         ptp = Container(
             OperationCode='SetDevicePropValue',

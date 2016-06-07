@@ -784,7 +784,7 @@ class PTPDevice(object):
         '''
         Manage session with context manager.
 
-        Once transport specifig interfaces are defined, this allows easier,
+        Once transport specific interfaces are defined, this allows easier,
         more nuclear sessions:
 
             ptp = PTPUSB()
@@ -792,7 +792,7 @@ class PTPDevice(object):
                 ptp.get_device_info()
         '''
         # TODO: Deal with devices that only support one session (where
-        # SessionID must be always 1)
+        # SessionID must be always 1, like some older Canon cameras.)
         if not self.__session_open:
             try:
                 self.open_session()
@@ -844,6 +844,7 @@ class PTPDevice(object):
 
     # Operation-specific methods and helpers
     # --------------------------------------
+    # TODO: use this option automatically from wrapper PTPy class.
     __has_the_knowledge = False
 
     def __parse_if_data(self, response, constructor):

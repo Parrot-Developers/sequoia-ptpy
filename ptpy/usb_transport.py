@@ -10,12 +10,11 @@ from usb.util import (
     ENDPOINT_OUT, ENDPOINT_IN,
 )
 from ptp import PTPError
-from parrot import PTPDevice
 from construct import (
     Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
     ULInt16, ULInt32,
 )
-from threading import Thread
+from threading import Thread, Event
 from Queue import Queue
 
 
@@ -49,7 +48,7 @@ def find_usb_cameras():
         )
 
 
-class USBTransport(PTPDevice):
+class USBTransport(object):
     '''Implement USB transport.'''
     def __init__(self, dev=None):
         '''Instantiate the first available PTP device over USB'''
@@ -76,9 +75,13 @@ class USBTransport(PTPDevice):
                         )
         usb.util.claim_interface(self.__dev, self.__intf)
         self.__event_queue = Queue()
+        self.__event_shutdown = Event()
         self.__event_proc = Thread(target=self.__poll_events)
         self.__event_proc.daemon = True
         self.__event_proc.start()
+
+    def _shutdown(self):
+        self.__event_shutdown.set()
 
     # Helper methods.
     # ---------------------
@@ -366,10 +369,12 @@ class USBTransport(PTPDevice):
 
     def __poll_events(self):
         '''Poll events, adding them to a queue.'''
-        while True:
+        while not self.__event_shutdown.is_set():
             evt = self.__recv(event=True, wait=False, raw=True)
             if evt is not None:
                 self.__event_queue.put(evt)
+        # Free USB ressource on shutdown.
+        usb.util.release_interface(self.__dev, self.__intf)
 
 
 if __name__ == "__main__":

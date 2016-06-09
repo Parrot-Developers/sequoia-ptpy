@@ -377,6 +377,7 @@ class USBTransport(object):
         usb.util.release_interface(self.__dev, self.__intf)
 
 
+# TODO: Move this to the examples folder, with PTPy instead of USBTransport
 if __name__ == "__main__":
     devs = find_usb_cameras()
     for dev in devs:

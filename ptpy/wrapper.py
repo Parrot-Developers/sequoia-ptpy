@@ -36,8 +36,8 @@ known_extensions = {
 
 
 def ptpy_factory(transport, extension=None):
-    # The order needs to be Transport inherits extension inherits ptp base.
-    # This is so that the extension can extend the base and the transport can
+    # The order needs to be Transport inherits Extension inherits Base. This is
+    # so that the extension can extend the base and the transport can
     # instantiate the correct endianness.
     inheritance = ((transport, extension, ptp, object)
                    if extension is not None
@@ -47,13 +47,20 @@ def ptpy_factory(transport, extension=None):
 
 # TODO: Add other transports?
 transport = usb
-# Attempt to instantiate simple device and get its information.
-PTP = ptpy_factory(transport)
-device = PTP()
-if device is None:
-    raise PTPyError('Could not find any PTP device.')
-else:
+# Attempt to instantiate simple device and get its information. Then terminate
+# it.
+
+PTPy = ptpy_factory(transport)
+device = PTPy()
+if device is not None:
+    # TODO: Do this at each instantiation of PTPy instead of just once. This
+    # workd OK for a single device but is not ideal.
     device_info = device.get_device_info()
     device._shutdown()
+    PTPy = ptpy_factory(
+        transport,
+        known_extensions[device_info.VendorExtensionID]
+    )
 
-PTPy = ptpy_factory(transport, known_extensions[device_info.VendorExtensionID])
+# TODO: Add a raw option to get a pure PTP device, and default to a smart
+# device that manages properties automatically.

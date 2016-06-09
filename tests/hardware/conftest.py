@@ -1,11 +1,11 @@
 from ..context import ptpy
-from ptpy.usb_transport import USBTransport
+from ptpy import PTPy
 # TODO Fix import once ptpy module is better structured.
 import pytest
 
 available_camera = None
 try:
-    available_camera = USBTransport()
+    available_camera = PTPy()
 except Exception:
     pass
 

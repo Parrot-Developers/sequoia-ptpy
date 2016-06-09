@@ -1,21 +1,14 @@
-'''This module extends PTPDevice for Canon devices.
+'''This module extends PTPDevice for Microsoft/MTP devices.
 
 Use it in a master module that determines the vendor and automatically uses its
-extension:
-
-    from ptp import *
-    # Here PTPDevice is unextended
-    from vendors.canon import *
-    # Here PTPDevice has a vendor extension
-    from transport.usb import *
-    # Here PTPDevice can now be instantiated over transport
+extension. This is why inheritance is not explicit.
 '''
 import ptp
 
 __all__ = ('PTPDevice',)
 
 
-class PTPDevice(ptp.PTPDevice):
+class PTPDevice(object):
     '''This class implements Canon's PTP operations.'''
 
     def _PropertyCode(self, **product_properties):

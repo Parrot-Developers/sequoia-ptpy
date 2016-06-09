@@ -1,14 +1,7 @@
 '''This module extends PTPDevice for Parrot devices.
 
 Use it in a master module that determines the vendor and automatically uses its
-extension:
-
-    from ptp import *
-    # Here PTPDevice is unextended
-    from vendors.parrot import *
-    # Here PTPDevice has a vendor extension
-    from transport.usb import *
-    # Here PTPDevice can now be instantiated over transport
+extension.
 '''
 import ptp
 from construct import (
@@ -18,7 +11,7 @@ from construct import (
 __all__ = ('PTPDevice',)
 
 
-class PTPDevice(ptp.PTPDevice):
+class PTPDevice(object):
     '''This class implements Parrot's PTP operations.'''
 
     def _PropertyCode(self, **product_properties):

@@ -4,6 +4,7 @@ from canon import PTPDevice as canon
 from microsoft import PTPDevice as mtp
 from parrot import PTPDevice as parrot
 from ptp import PTPDevice as ptp
+from ptp import PTPError
 
 from usb_transport import USBTransport as usb
 
@@ -51,7 +52,11 @@ transport = usb
 # it.
 
 PTPy = ptpy_factory(transport)
-device = PTPy()
+try:
+    device = PTPy()
+except PTPError:
+    device = None
+
 if device is not None:
     # TODO: Do this at each instantiation of PTPy instead of just once. This
     # workd OK for a single device but is not ideal.

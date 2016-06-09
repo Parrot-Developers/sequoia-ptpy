@@ -15,7 +15,7 @@ from construct import (
     Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
     ULInt16, ULInt32,
 )
-from threading import Thread, Lock
+from threading import Thread
 from Queue import Queue
 
 

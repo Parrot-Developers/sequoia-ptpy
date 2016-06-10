@@ -3,7 +3,7 @@
 Use it in a master module that determines the vendor and automatically uses its
 extension.
 '''
-import ptp
+from .. import ptp
 from construct import (
     BitStruct, Container, Enum, ExprAdapter, Flag, Padding, Pass
 )

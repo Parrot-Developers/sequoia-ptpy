@@ -4,12 +4,13 @@ It exports the PTPUSB class. Both the transport layer and the basic PTP
 implementation are Vendor agnostic. Vendor extensions should extend these to
 support more operations.
 '''
+from __future__ import absolute_import
 import usb.core
 from usb.util import (
     endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK, ENDPOINT_TYPE_INTR,
     ENDPOINT_OUT, ENDPOINT_IN,
 )
-from ptp import PTPError
+from ..ptp import PTPError
 from construct import (
     Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
     ULInt16, ULInt32,

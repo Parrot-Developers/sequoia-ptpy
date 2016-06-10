@@ -1,12 +1,10 @@
 '''Master module that instantiates the correct extension and transport.'''
-# Extensions
-from canon import PTPDevice as canon
-from microsoft import PTPDevice as mtp
-from parrot import PTPDevice as parrot
-from ptp import PTPDevice as ptp
-from ptp import PTPError
-
-from usb_transport import USBTransport as usb
+from __future__ import absolute_import
+from .extensions.canon import PTPDevice as canon
+from .extensions.microsoft import PTPDevice as mtp
+from .extensions.parrot import PTPDevice as parrot
+from .ptp import PTPDevice, PTPError
+from .transports.usb import USBTransport as usb
 
 
 class PTPyError(Exception):
@@ -40,9 +38,9 @@ def ptpy_factory(transport, extension=None):
     # The order needs to be Transport inherits Extension inherits Base. This is
     # so that the extension can extend the base and the transport can
     # instantiate the correct endianness.
-    inheritance = ((transport, extension, ptp, object)
+    inheritance = ((transport, extension, PTPDevice, object)
                    if extension is not None
-                   else (transport, ptp, object))
+                   else (transport, PTPDevice, object))
     return type('PTPy', inheritance, {})
 
 

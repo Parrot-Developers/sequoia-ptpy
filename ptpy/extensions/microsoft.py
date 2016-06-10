@@ -3,7 +3,7 @@
 Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
-import ptp
+from .. import ptp
 
 __all__ = ('PTPDevice',)
 

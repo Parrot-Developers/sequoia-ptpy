@@ -60,7 +60,6 @@ if device is not None:
     # workd OK for a single device but is not ideal.
     device_info = device.get_device_info()
     device._shutdown()
-    print device_info
     try:
         extension = known_extensions[device_info.VendorExtensionID]
     except KeyError:

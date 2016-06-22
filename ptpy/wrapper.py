@@ -60,9 +60,15 @@ if device is not None:
     # workd OK for a single device but is not ideal.
     device_info = device.get_device_info()
     device._shutdown()
+    print device_info
+    try:
+        extension = known_extensions[device_info.VendorExtensionID]
+    except KeyError:
+        extension = None
+
     PTPy = ptpy_factory(
         transport,
-        known_extensions[device_info.VendorExtensionID]
+        extension
     )
 
 # TODO: Add a raw option to get a pure PTP device, and default to a smart

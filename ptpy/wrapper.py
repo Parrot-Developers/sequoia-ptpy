@@ -34,6 +34,44 @@ known_extensions = {
 }
 
 
+class PTPyMeta(type):
+    '''
+    Metaclass for automatically identifiyng and loading PTP extensions in PTPy.
+    '''
+    def __new__(cls, device=None, extension=None, transport=None, autobuild=True):
+        plain = ptpy_factory(transport)
+        try:
+            plain_camera = plain()
+        except PTPError:
+            plain_camera = None
+
+        if device is not None:
+            device_info = device.get_device_info()
+            device._shutdown()
+            try:
+                extension = known_extensions[device_info.VendorExtensionID]
+            except KeyError:
+                extension = None
+
+            PTPy = ptpy_factory(
+                transport,
+                extension
+            )
+
+    # TODO: Add a raw option to get a pure PTP device, and default to a smart
+    # device that manages properties automatically.
+
+class PTPy(metaclass=PTPyMeta):
+    def __init__(self, extension=None, transport=None, knowledge=True):
+        # Query the device for information on all its properties and update
+        # when there are changes.
+        if knowledge:
+            self._obtain_the_knowledge()
+
+        if extension:
+
+
+
 def ptpy_factory(transport, extension=None):
     # The order needs to be Transport inherits Extension inherits Base. This is
     # so that the extension can extend the base and the transport can

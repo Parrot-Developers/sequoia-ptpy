@@ -1,12 +1,11 @@
 from ..context import ptpy
-from ptpy import PTPy
-# TODO Fix import once ptpy module is better structured.
 import pytest
 
 available_camera = None
 try:
-    available_camera = PTPy()
-except Exception:
+    available_camera = ptpy.PTPy(knowledge=False)
+except Exception as e:
+    print e
     pass
 
 

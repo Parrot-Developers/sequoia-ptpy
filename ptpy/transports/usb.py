@@ -17,6 +17,7 @@ from construct import (
 )
 from threading import Thread, Event
 from Queue import Queue
+from time import sleep
 
 
 __all__ = ('USBTransport', 'find_usb_cameras')
@@ -83,6 +84,11 @@ class USBTransport(object):
 
     def _shutdown(self):
         self.__event_shutdown.set()
+        # TODO: Understand why the event thread stops only after main thread is
+        # TODO: done.
+        sleep(.1)
+        # Free USB resource on shutdown.
+        usb.util.release_interface(self.__dev, self.__intf)
 
     # Helper methods.
     # ---------------------
@@ -374,8 +380,6 @@ class USBTransport(object):
             evt = self.__recv(event=True, wait=False, raw=True)
             if evt is not None:
                 self.__event_queue.put(evt)
-        # Free USB ressource on shutdown.
-        usb.util.release_interface(self.__dev, self.__intf)
 
 
 # TODO: Move this to the examples folder, with PTPy instead of USBTransport

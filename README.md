@@ -6,6 +6,101 @@ ISO15740:2013(E).
 This implementation is transport agnostic and can be used along with USB,
 serial or IP layers to communicate with PTP compliant cameras.
 
+# Basic Usage
+
+PTPy accomodates both the low-level developers wishing to test their PTP
+implementation as well as users of the cameras in the market.
+
+By default, PTPy will automatically detect which extension the camera supports
+and load it so that the interaction is seamless.
+
+> The most basic usage of PTPy with a camera connected is:
+
+```python
+from ptpy import PTPy
+
+camera = PTPy()
+print camera.get_device_info()
+
+with camera.session():
+    camera.initiate_capture()
+```
+
+Developers might want to disable the extra functionality, or impose an
+extension to use. E.g. when the PTP Extension ID has not been assigned.
+
+> It is possible to get bare PTP functionality with:
+
+```python
+from ptpy import PTPy
+
+camera = PTPy(raw=True)
+print camera.get_device_info()
+
+with camera.session():
+    # Do basic things here.
+```
+
+A developer might want to test the case where the extension is incorrectly
+identified. This is possible by imposing an arbitrary extension.
+
+> Impose MTP (Microsoft PTP Extension) to any camera:
+
+```python
+from ptpy import PTPy
+from ptpy.extensions.microsoft import PTPDevice as mtp
+
+camera = PTPy(extension=mtp)
+with camera.session():
+    # Do bizarre things here.
+```
+
+Sessions are managed automatically with context managers.
+All sessions under a top session with share the top session.
+
+> To inspect the current session and transaction use the corresponding properties:
+
+```python
+from ptpy import PTPy
+
+camera = PTPy()
+with camera.session():
+    camera.get_device_info()
+
+    print('Top level session:')
+    print(camera.session_id)
+    print('Transaction ID:')
+    print(camera.transaction_id)
+
+    with camera.session():
+
+        camera.get_device_info()
+
+        print('Shared session:')
+        print(camera.session_id)
+
+        print('Transaction ID increases:')
+        print(camera.transaction_id)
+
+with camera.session():
+    camera.get_device_info()
+
+    print('First session:')
+    print(camera.session_id)
+
+    print('Transaction ID:')
+    print(camera.transaction_id)
+
+with camera.session():
+    camera.get_device_info()
+
+    print('Second session:')
+    print(camera.session_id)
+
+    print('Transaction ID:')
+    print(camera.transaction_id)
+```
+
 # Transport
 
 A proof-of-concept USB implementation is provided using PyUSB. Though it might
@@ -21,6 +116,8 @@ meant to provice vendor-specific sets of operations, events and properties.
 
 Partial support for Canon and Microsoft (MTP) extensions is provided. Full
 support is expected eventually.
+
+Extensions are managed automatically for users or can be imposed by developers.
 
 ## Framework
 

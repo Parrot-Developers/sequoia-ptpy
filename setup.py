@@ -18,7 +18,7 @@ test_requirements = [
 
 setup(
     name='ptpy',
-    version='0.0.0',
+    version='0.1.0',
     description='A pure Python implementation of Picture Transfer Protocol.',
     long_description=read('README.md'),
     packages=find_packages(exclude=['tests', 'examples']),

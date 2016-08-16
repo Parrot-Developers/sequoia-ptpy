@@ -16,14 +16,20 @@ from construct import (
     ULInt16, ULInt32,
 )
 from threading import Thread, Event
+from threading import enumerate as threading_enumerate
 from Queue import Queue
-from time import sleep
 
 
 __all__ = ('USBTransport', 'find_usb_cameras')
 __author__ = 'Luis Mario Domenzain'
 
 PTP_USB_CLASS = 6
+
+
+def _main_thread_alive():
+    return any(
+        (i.name == "MainThread") and i.is_alive() for i in
+        threading_enumerate())
 
 
 class find_class(object):
@@ -79,15 +85,13 @@ class USBTransport(object):
         self.__event_queue = Queue()
         self.__event_shutdown = Event()
         self.__event_proc = Thread(target=self.__poll_events)
-        self.__event_proc.daemon = True
+        self.__event_proc.daemon = False
         self.__event_proc.start()
 
     def _shutdown(self):
         self.__event_shutdown.set()
-        # TODO: Understand why the event thread stops only after main thread is
-        # TODO: done.
-        sleep(.1)
         # Free USB resource on shutdown.
+        self.__event_proc.join()
         usb.util.release_interface(self.__dev, self.__intf)
 
     # Helper methods.
@@ -376,7 +380,7 @@ class USBTransport(object):
 
     def __poll_events(self):
         '''Poll events, adding them to a queue.'''
-        while not self.__event_shutdown.is_set():
+        while not self.__event_shutdown.is_set() and _main_thread_alive():
             evt = self.__recv(event=True, wait=False, raw=True)
             if evt is not None:
                 self.__event_queue.put(evt)

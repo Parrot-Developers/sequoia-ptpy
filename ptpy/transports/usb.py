@@ -18,6 +18,7 @@ from construct import (
 from threading import Thread, Event
 from threading import enumerate as threading_enumerate
 from Queue import Queue
+import atexit
 
 
 __all__ = ('USBTransport', 'find_usb_cameras')
@@ -86,6 +87,7 @@ class USBTransport(object):
         self.__event_shutdown = Event()
         self.__event_proc = Thread(target=self.__poll_events)
         self.__event_proc.daemon = False
+        atexit.register(self._shutdown)
         self.__event_proc.start()
 
     def _shutdown(self):

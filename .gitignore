@@ -4,3 +4,5 @@ cscope.out
 .cache
 *.eggs
 *.egg
+build/*
+dist/*

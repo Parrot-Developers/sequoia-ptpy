@@ -1,5 +1,5 @@
 from test_camera import TestCamera
-from construct import Value, Rename, Struct
+from construct import Computed, Struct
 
 
 def assert_response_code_different(response, value, reason):
@@ -95,10 +95,9 @@ class TestGetSetResetProperties(TestCamera):
             desc = camera.get_device_prop_desc(device_property)
             # TODO: refactor this into PTPy core to automatically parse and
             # build properties for which a GetDevicePropDesc has been issued.
-            builder = Struct(
-                'Builder',
-                Value('DataTypeCode', lambda ctx: desc.DataTypeCode),
-                Rename('CurrentValue', camera._DataType)
+            builder = 'Builder' / Struct(
+                'DataTypeCode' / Computed(lambda ctx: desc.DataTypeCode),
+                'CurrentValue' / camera._DataType
                 )
             data = builder.build(desc)
             assert value.Data == data,\

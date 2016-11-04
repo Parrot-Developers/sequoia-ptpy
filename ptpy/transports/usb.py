@@ -13,7 +13,7 @@ from usb.util import (
 from ..ptp import PTPError
 from construct import (
     Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
-    ULInt16, ULInt32,
+    Int16ul, Int32ul
 )
 from threading import Thread, Event
 from threading import enumerate as threading_enumerate
@@ -136,11 +136,11 @@ class USBTransport(object):
     def __setup_constructors(self):
         '''Set endianness and create transport-specific constructors.'''
         # Set endianness of constructors before using them.
-        self._set_endian(little=True)
+        self._set_endian('little')
 
-        self.__Length = ULInt32('Length')
+        self.__Length = Int32ul
         self.__Type = Enum(
-                ULInt16('Type'),
+                Int16ul,
                 Undefined=0x0000,
                 Command=0x0001,
                 Data=0x0002,
@@ -148,48 +148,44 @@ class USBTransport(object):
                 Event=0x0004,
                 )
         # This is just a convenience constructor to get the size of a header.
-        self.__Code = ULInt16('Code')
+        self.__Code = Int16ul
         self.__Header = Struct(
-                'Header',
-                self.__Length,
-                self.__Type,
-                self.__Code,
-                self._TransactionID,
+                'Length' / self.__Length,
+                'Type' / self.__Type,
+                'Code' / self.__Code,
+                'TransactionID' / self._TransactionID,
                 )
         # These are the actual constructors for parsing and building.
         self.__CommandHeader = Struct(
-                'CommandHeader',
-                self.__Length,
-                self.__Type,
-                self._OperationCode,
-                self._TransactionID,
+                'Length' / self.__Length,
+                'Type' / self.__Type,
+                'OperationCode' / self._OperationCode,
+                'TransactionID' / self._TransactionID,
                 )
         self.__ResponseHeader = Struct(
-                'ResponseHeader',
-                self.__Length,
-                self.__Type,
-                self._ResponseCode,
-                self._TransactionID,
+                'Length' / self.__Length,
+                'Type' / self.__Type,
+                'ResponseCode' / self._ResponseCode,
+                'TransactionID' / self._TransactionID,
                 )
         self.__EventHeader = Struct(
-                'EventHeader',
-                self.__Length,
-                self.__Type,
-                self._EventCode,
-                self._TransactionID,
+                'Length' / self.__Length,
+                'Type' / self.__Type,
+                'EventCode' / self._EventCode,
+                'TransactionID' / self._TransactionID,
                 )
         # Apparently nobody uses the SessionID field. Even though it is
         # specified in ISO15740:2013(E), no device respects it and the session
         # number is implicit over USB.
         self.__Param = Range(0, 5, self._Parameter)
-        self.__FullParam = Struct('Parameter', Array(5, self._Parameter))
-        self.__FullEventParam = Struct('Parameter', Array(3, self._Parameter))
+        self.__FullParam = Struct(Array(5, self._Parameter))
+        self.__FullEventParam = Struct(Array(3, self._Parameter))
         self.__CommandTransactionBase = Struct(
-                'Command',
                 Embedded(self.__CommandHeader),
-                Bytes('Payload',
-                      lambda ctx, h=self.__Header: ctx.Length - h.sizeof()),
+                'Payload' / Bytes(
+                    lambda ctx, h=self.__Header: ctx.Length - h.sizeof()
                 )
+        )
         self.__CommandTransaction = ExprAdapter(
                 self.__CommandTransactionBase,
                 encoder=lambda obj, ctx, h=self.__Header: Container(
@@ -199,10 +195,9 @@ class USBTransport(object):
                 decoder=lambda obj, ctx: obj,
                 )
         self.__ResponseTransactionBase = Struct(
-                'Response',
                 Embedded(self.__ResponseHeader),
-                Bytes('Payload',
-                      lambda ctx, h=self.__Header: ctx.Length - h.sizeof()),
+                'Payload' / Bytes(
+                    lambda ctx, h=self.__Header: ctx.Length - h.sizeof())
                 )
         self.__ResponseTransaction = ExprAdapter(
                 self.__ResponseTransactionBase,
@@ -213,9 +208,8 @@ class USBTransport(object):
                 decoder=lambda obj, ctx: obj,
                 )
         self.__EventTransactionBase = Struct(
-                'Event',
                 Embedded(self.__EventHeader),
-                Bytes('Payload',
+                'Payload' / Bytes(
                       lambda ctx, h=self.__Header: ctx.Length - h.sizeof()),
                 )
         self.__EventTransaction = ExprAdapter(
@@ -230,6 +224,7 @@ class USBTransport(object):
     def __parse_response(self, usbdata):
         '''Helper method for parsing USB data.'''
         # Build up container with all PTP info.
+        usbdata = bytearray(usbdata)
         transaction = self.__ResponseTransaction.parse(usbdata)
         response = Container(
             SessionID=self.session_id,
@@ -271,7 +266,7 @@ class USBTransport(object):
             else:
                 raise e
         header = self.__ResponseHeader.parse(
-            usbdata[0:self.__Header.sizeof()]
+            bytearray(usbdata[0:self.__Header.sizeof()])
         )
         if header.Type not in ['Response', 'Data', 'Event']:
             raise PTPError(

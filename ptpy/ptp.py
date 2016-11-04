@@ -11,11 +11,11 @@ and may need to be adapted to transport-endianness:
     SessionID(be=True)  # returns big endian constructor
 '''
 from construct import (
-    Array, BitField, Container, Embedded, Enum, ExprAdapter,
-    LengthValueAdapter, Pass, PrefixedArray, Rename, SBInt16, SBInt32, SBInt64,
-    SBInt8, Sequence, SLInt16, SLInt32, SLInt64, SLInt8, SNInt16, SNInt32,
-    SNInt64, SNInt8, Struct, Switch, UBInt16, UBInt32, UBInt64, UBInt8,
-    ULInt16, ULInt32, ULInt64, ULInt8, UNInt16, UNInt32, UNInt64, UNInt8, Value
+    Array, BitsInteger, Container, Embedded, Enum, ExprAdapter,
+    Prefixed, Pass, PrefixedArray, Int16sb, Int32sb, Int64sb,
+    Int8sb, Sequence, Int16sl, Int32sl, Int64sl, Int8sl, Int16sn, Int32sn,
+    Int64sn, Int8sn, Struct, Switch, Int16ub, Int32ub, Int64ub, Int8ub,
+    Int16ul, Int32ul, Int64ul, Int8ul, Int16un, Int32un, Int64un, Int8un, Computed,
     )
 from contextlib import contextmanager
 from dateutil.parser import parse as iso8601
@@ -38,79 +38,33 @@ class PTPUnimplemented(PTPError):
     '''Exception to indicate missing implementation.'''
     pass
 
-
-# Helper functions
-# ----------------
-def switch_endian(le, be, l, b, n):
-    '''Return little, native or big endian.'''
-    if (be != le):
-        return l if le else b
-    elif le:
-        raise PTPError('Cannot be both little and big endian...')
-    else:
-        return n
-
-
 class PTPDevice(object):
     '''Implement bare PTP Device. Vendor specific devices should extend it.'''
     # Base PTP protocol transaction elements
     # --------------------------------------
-    def _UInt8(self, _le_=False, _be_=False):
-        return switch_endian(_le_, _be_, ULInt8, UBInt8, UNInt8)
+    _UInt8 = Int8un
+    _UInt16 = Int16un
+    _UInt32 = Int32un
+    _UInt64 = Int64un
+    _UInt128 = BitsInteger(128)
 
-    def _UInt16(self, _le_=False, _be_=False):
-        return switch_endian(_le_, _be_, ULInt16, UBInt16, UNInt16)
-
-    def _UInt32(self, _le_=False, _be_=False):
-        return switch_endian(_le_, _be_, ULInt32, UBInt32, UNInt32)
-
-    def _UInt64(self, _le_=False, _be_=False):
-        return switch_endian(_le_, _be_, ULInt64, UBInt64, UNInt64)
-
-    def _UInt128(self, _le_=False, _be_=False):
-        # TODO: This expression is incorrect. Should be encased in BitStruct
-        return switch_endian(
-            _le_,
-            _be_,
-            lambda name: BitField(name, 128, swapped=True),
-            lambda name: BitField(name, 128, swapped=False),
-            lambda name: BitField(name, 128)
-        )
-
-    def _Int8(self, _le_=False, _be_=False):
-        return switch_endian(_le_, _be_, SLInt8, SBInt8, SNInt8)
-
-    def _Int16(self, _le_=False, _be_=False):
-        return switch_endian(_le_, _be_, SLInt16, SBInt16, SNInt16)
-
-    def _Int32(self, _le_=False, _be_=False):
-        return switch_endian(_le_, _be_, SLInt32, SBInt32, SNInt32)
-
-    def _Int64(self, _le_=False, _be_=False):
-        return switch_endian(_le_, _be_, SLInt64, SBInt64, SNInt64)
-
-    def _Int128(self, _le_=False, _be_=False):
-        '''Return desired endianness for Parameter'''
-        # TODO: This expression is incorrect. Should be encased in BitStruct
-        return switch_endian(
-            _le_,
-            _be_,
-            lambda name: BitField(name, 128, signed=True, swapped=True),
-            lambda name: BitField(name, 128, signed=True, swapped=False),
-            lambda name: BitField(name, 128, signed=True)
-        )
+    _Int8 = Int8sn
+    _Int16 = Int16sn
+    _Int32 = Int32sn
+    _Int64 = Int64sn
+    _Int128 = BitsInteger(128, signed=True)
 
     def _Parameter(self):
         '''Return desired endianness for Parameter'''
-        return self._UInt32('Parameter')
+        return self._UInt32
 
     def _SessionID(self):
         '''Return desired endianness for SessionID'''
-        return self._UInt32('SessionID')
+        return self._UInt32
 
     def _TransactionID(self):
         '''Return desired endianness for TransactionID'''
-        return self._UInt32('TransactionID')
+        return self._UInt32
 
     # TODO: Check if these Enums can be replaced with more general
     # associations. Or even with Python Enums. Otherwise there is always a risk
@@ -118,8 +72,8 @@ class PTPDevice(object):
     def _OperationCode(self, **vendor_operations):
         '''Return desired endianness for known OperationCode'''
         return Enum(
-            self._UInt16('OperationCode'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             Undefined=0x1000,
             GetDeviceInfo=0x1001,
             OpenSession=0x1002,
@@ -164,8 +118,8 @@ class PTPDevice(object):
     def _ResponseCode(self, **vendor_responses):
         '''Return desired endianness for known ResponseCode'''
         return Enum(
-            self._UInt16('ResponseCode'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             Undefined=0x2000,
             OK=0x2001,
             GeneralError=0x2002,
@@ -208,8 +162,8 @@ class PTPDevice(object):
     def _EventCode(self, **vendor_events):
         '''Return desired endianness for known EventCode'''
         return Enum(
-            self._UInt16('EventCode'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             Undefined=0x4000,
             CancelTransaction=0x4001,
             ObjectAdded=0x4002,
@@ -230,36 +184,33 @@ class PTPDevice(object):
 
     def _Event(self):
         return Struct(
-            'Event',
-            self._EventCode,
-            self._SessionID,
-            self._TransactionID,
-            Array(3, self._Parameter),
+            'EventCode' / self._EventCode,
+            'SessionID' / self._SessionID,
+            'TransactionID' / self._TransactionID,
+            'Parameter' / Array(3, self._Parameter),
         )
 
     def _Response(self):
         return Struct(
-            'Response',
-            self._ResponseCode,
-            self._SessionID,
-            self._TransactionID,
-            Array(5, self._Parameter),
+            'ResponseCode' / self._ResponseCode,
+            'SessionID' / self._SessionID,
+            'TransactionID' / self._TransactionID,
+            'Parameter' / Array(5, self._Parameter),
         )
 
     def _Operation(self):
         return Struct(
-            'Operation',
-            self._OperationCode,
-            self._SessionID,
-            self._TransactionID,
-            Array(5, self._Parameter),
+            'OperationCode' / self._OperationCode,
+            'SessionID' / self._SessionID,
+            'TransactionID' / self._TransactionID,
+            'Parameter' / Array(5, self._Parameter),
         )
 
     def _PropertyCode(self, **vendor_properties):
         '''Return desired endianness for known OperationCode'''
         return Enum(
-            self._UInt16('PropertyCode'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             Undefined=0x5000,
             BatteryLevel=0x5001,
             FunctionalMode=0x5002,
@@ -299,12 +250,13 @@ class PTPDevice(object):
     # ------------------------------------
     def _ObjectHandle(self):
         '''Return desired endianness for ObjectHandle'''
-        return self._UInt32('ObjectHandle')
+        return self._UInt32
 
     def _ObjectFormatCode(self, **vendor_object_formats):
         '''Return desired endianness for known ObjectFormatCode'''
         return Enum(
-            self._UInt16('ObjectFormatCode'),
+            self._UInt16,
+            default=Pass,
             # Ancilliary
             UndefinedAncilliary=0x3000,
             Association=0x3001,
@@ -337,47 +289,38 @@ class PTPDevice(object):
             JP2=0x380F,
             JPX=0x3810,
             DNG=0x3811,
-            _default_=Pass,
             **vendor_object_formats
         )
 
-    def _DateTime(self, name):
+    def _DateTime(self):
         '''Return desired endianness for DateTime'''
         return ExprAdapter(
-            self._PTPString(name),
+            self._PTPString,
             encoder=lambda obj, ctx:
                 # TODO: Support timezone encoding.
                 datetime.strftime(obj, '%Y%m%dT%H%M%S.%f')[:-5],
             decoder=lambda obj, ctx: iso8601(obj),
         )
 
-    def _PTPString(self, name):
+    def _PTPString(self):
         '''Returns a PTP String constructor'''
         return ExprAdapter(
-            LengthValueAdapter(
-                Sequence(
-                    name,
-                    self._UInt8('NumChars'),
-                    Array(lambda ctx: ctx.NumChars, self._UInt16('Chars'))
-                )
-            ),
+            PrefixedArray(self._UInt8, self._UInt16),
             encoder=lambda obj, ctx:
                 [] if len(obj) == 0 else [ord(c) for c in unicode(obj)]+[0],
             decoder=lambda obj, ctx:
                 u''.join(
                 [unichr(o) for o in obj]
                 ).split('\x00')[0],
-        )
+            )
 
-    def _PTPArray(self, name, element):
-        return PrefixedArray(
-            Rename(name, element),
-            length_field=self._UInt32('NumElements'),
-        )
+    def _PTPArray(self, element):
+        return PrefixedArray(self._UInt32, element)
 
     def _VendorExtensionID(self):
         return Enum(
-            self._UInt32('VendorExtensionID'),
+            self._UInt32,
+            default=Pass,
             EastmanKodak=0x00000001,
             SeikoEpson=0x00000002,
             Agilent=0x00000003,
@@ -395,34 +338,32 @@ class PTPDevice(object):
             Sony=0x00000011,  # Self-imposed.
             Samsung=0x0000001A,
             Parrot=0x0000001B,
-            _default_=Pass,
         )
 
     def _DeviceInfo(self):
         '''Return desired endianness for DeviceInfo'''
         return Struct(
-            'DeviceInfo',
-            self._UInt16('StandardVersion'),
-            self._VendorExtensionID,
-            self._UInt16('VendorExtensionVersion'),
-            self._PTPString('VendorExtensionDesc'),
-            self._UInt16('FunctionalMode'),
-            self._PTPArray('OperationsSupported', self._OperationCode),
-            self._PTPArray('EventsSupported', self._EventCode),
-            self._PTPArray('DevicePropertiesSupported', self._PropertyCode),
-            self._PTPArray('CaptureFormats', self._ObjectFormatCode),
-            self._PTPArray('ImageFormats', self._ObjectFormatCode),
-            self._PTPString('Manufacturer'),
-            self._PTPString('Model'),
-            self._PTPString('DeviceVersion'),
-            self._PTPString('SerialNumber'),
+            'StandardVersion' / self._UInt16,
+            'VendorExtensionID' / self._VendorExtensionID,
+            'VendorExtensionVersion' / self._UInt16,
+            'VendorExtensionDesc' / self._PTPString,
+            'FunctionalMode' / self._UInt16,
+            'OperationsSupported' / self._PTPArray(self._OperationCode),
+            'EventsSupported' / self._PTPArray(self._EventCode),
+            'DevicePropertiesSupported' / self._PTPArray(self._PropertyCode),
+            'CaptureFormats' / self._PTPArray(self._ObjectFormatCode),
+            'ImageFormats' / self._PTPArray(self._ObjectFormatCode),
+            'Manufacturer' / self._PTPString,
+            'Model' / self._PTPString,
+            'DeviceVersion' / self._PTPString,
+            'SerialNumber' / self._PTPString,
         )
 
     def _StorageType(self):
         '''Return desired endianness for StorageType'''
         return Enum(
-            self._UInt16('StorageType'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             Undefined=0x0000,
             FixedROM=0x0001,
             RemovableROM=0x0002,
@@ -433,8 +374,8 @@ class PTPDevice(object):
     def _FilesystemType(self, **vendor_filesystem_types):
         '''Return desired endianness for known FilesystemType'''
         return Enum(
-            self._UInt16('FilesystemType'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             Undefined=0x0000,
             GenericFlat=0x0001,
             GenericHierarchical=0x0002,
@@ -445,8 +386,8 @@ class PTPDevice(object):
     def _AccessCapability(self):
         '''Return desired endianness for AccessCapability'''
         return Enum(
-            self._UInt16('AccessCapability'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             ReadWrite=0x0000,
             ReadOnlyWithoutObjectDeletion=0x0001,
             ReadOnlyWithObjectDeletion=0x0002,
@@ -455,32 +396,31 @@ class PTPDevice(object):
     def _StorageInfo(self):
         '''Return desired endianness for StorageInfo'''
         return Struct(
-            'StorageInfo',
-            self._StorageType,
-            self._FilesystemType,
-            self._AccessCapability,
-            self._UInt64('MaxCapacity'),
-            self._UInt64('FreeSpaceInBytes'),
-            self._UInt32('FreeSpaceInImages'),
-            self._PTPString('StorageDescription'),
-            self._PTPString('VolumeLabel'),
+            'StorageType' / self._StorageType,
+            'FilesystemType' / self._FilesystemType,
+            'AccessCapability' / self._AccessCapability,
+            'MacCapacity' / self._UInt64,
+            'FreeSpaceInBytes' / self._UInt64,
+            'FreeSpaceInImages' / self._UInt32,
+            'StorageDescription' / self._PTPString,
+            'VolumeLabel' / self._PTPString,
         )
 
     def _StorageID(self):
         '''Return desired endianness for StorageID'''
         # TODO: automatically set and parse PhysicalID and LogicalID
-        return self._UInt32('StorageID')
+        return self._UInt32
 
     def _StorageIDs(self):
         '''Return desired endianness for StorageID'''
         # TODO: automatically set and parse PhysicalID and LogicalID
-        return self._PTPArray('StorageIDs', self._StorageID)
+        return self._PTPArray(self._StorageID)
 
     def _DataTypeCode(self, **vendor_datatype_codes):
         '''Return desired endianness for DevicePropDesc'''
         return Enum(
-            self._UInt16('DataTypeCode'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             Undefined=0x0000,
             Int128=0x0009,
             Int128Array=0x4009,
@@ -508,94 +448,80 @@ class PTPDevice(object):
 
     def _DataType(self, **vendor_datatypes):
         datatypes = {
-            'Int128': self._Int128('Int128'),
-            'Int128Array': self._PTPArray(
-                'Int128Array', self._Int128('Int128')
-            ),
-            'Int16': self._Int16('Int16'),
-            'Int16Array': self._PTPArray(
-                'Int16Array', self._Int16('Int16')
-            ),
-            'Int32': self._Int32('Int32'),
-            'Int32Array': self._PTPArray(
-                'Int32Array', self._Int32('Int32')
-            ),
-            'Int64': self._Int64('Int64'),
-            'Int64Array': self._PTPArray(
-                'Int64Array', self._Int64('Int64')
-            ),
-            'Int8': self._Int8('Int8'),
-            'Int8Array': self._PTPArray(
-                'Int8Array', self._Int8('Int8')
-            ),
-            'UInt128': self._UInt128('UInt128'),
-            'UInt128Array': self._PTPArray(
-                'UInt128Array', self._UInt128('UInt128')
-            ),
-            'UInt16': self._UInt16('UInt16'),
-            'UInt16Array': self._PTPArray(
-                'UInt16Array', self._UInt16('UInt16')
-            ),
-            'UInt32': self._UInt32('UInt32'),
-            'UInt32Array': self._PTPArray(
-                'UInt32Array', self._UInt32('UInt32')
-            ),
-            'UInt64': self._UInt64('UInt64'),
-            'UInt64Array': self._PTPArray(
-                'UInt64Array', self._UInt64('UInt64')
-            ),
-            'UInt8': self._UInt8('UInt8'),
-            'UInt8Array': self._PTPArray(
-                'UInt8Array', self._UInt8('UInt8')
-            ),
-            'String': self._PTPString('String'),
+            'Int128': self._Int128,
+            'Int128Array': self._PTPArray(self._Int128),
+            'Int16': self._Int16,
+            'Int16Array': self._PTPArray(self._Int16),
+            'Int32': self._Int32,
+            'Int32Array': self._PTPArray(self._Int32),
+            'Int64': self._Int64,
+            'Int64Array': self._PTPArray(self._Int64),
+            'Int8': self._Int8,
+            'Int8Array': self._PTPArray(self._Int8),
+            'UInt128': self._UInt128,
+            'UInt128Array': self._PTPArray(self._UInt128),
+            'UInt16': self._UInt16,
+            'UInt16Array': self._PTPArray(self._UInt16),
+            'UInt32': self._UInt32,
+            'UInt32Array': self._PTPArray(self._UInt32),
+            'UInt64': self._UInt64,
+            'UInt64Array': self._PTPArray(self._UInt64),
+            'UInt8': self._UInt8,
+            'UInt8Array': self._PTPArray(self._UInt8),
+            'String': self._PTPString,
         }
         datatypes.update(vendor_datatypes if vendor_datatypes else {})
+
+        def DataTypeCode(ctx):
+            # Try to get the DataTypeCode from the parent contexts up to 20
+            # levels...
+            for i in range(20):
+                try:
+                    return ctx.DataTypeCode
+                except AttributeError:
+                    ctx = ctx._
+
+
         return Switch(
-            'DataType',
-            lambda ctx: ctx.DataTypeCode,
-            datatypes
+            DataTypeCode,
+            datatypes,
+            default=Pass
         )
 
     def _GetSet(self):
         return Enum(
-            self._UInt8('GetSet'),
-            _default_=Pass,
+            self._UInt8,
+            default=Pass,
             Get=0x00,
             GetSet=0x01,
         )
 
     def _FormFlag(self):
         return Enum(
-            self._UInt8('FormFlag'),
-            _default_=Pass,
+            self._UInt8,
+            default=Pass,
             NoForm=0x00,
             Range=0x01,
             Enumeration=0x02,
         )
 
     def _RangeForm(self, element):
-        return Embedded(
-            Struct(
-                'RangeForm',
-                Rename('MinimumValue', element),
-                Rename('MaximumValue', element),
-                Rename('StepSize', element),
-            )
-        )
+        return Embedded(Sequence(
+                'MinimumValue' / element,
+                'MaximumValue' / element,
+                'StepSize' / element,
+            ))
 
     def _EnumerationForm(self, element):
-        return Struct('Enumeration', PrefixedArray(
-            Rename('Enumeration', element),
-            length_field=self._UInt16('length'),
-        ))
+        return PrefixedArray(self._UInt16, element)
 
     def _Form(self, element):
         return Switch(
-            'Form',
-            lambda ctx: ctx.FormFlag, {
-                'Range': self._RangeForm(element),
-                'Enumeration': self._EnumerationForm(element),
+            lambda x : x.FormFlag,
+            {
+                'Range': 'Range' / self._RangeForm(element),
+                'Enumeration': 'Enumeration' / self._EnumerationForm(element),
+                'NoForm': Pass
             },
             default=Pass,
         )
@@ -603,28 +529,27 @@ class PTPDevice(object):
     def _DevicePropDesc(self):
         '''Return desired endianness for DevicePropDesc'''
         return Struct(
-            'DevicePropDesc',
-            self._PropertyCode,
-            self._DataTypeCode,
-            self._GetSet,
-            Rename('FactoryDefaultValue', self._DataType),
-            Rename('CurrentValue', self._DataType),
-            self._FormFlag,
-            self._Form(self._DataType),
+            'PropertyCode' / self._PropertyCode,
+            'DataTypeCode' / self._DataTypeCode,
+            'GetSet' / self._GetSet,
+            'FactoryDefaultValue' / self._DataType,
+            'CurrentValue' / self._DataType,
+            'FormFlag' / self._FormFlag,
+            'Form' / self._Form(self._DataType)
         )
 
     def _ProtectionStatus(self):
         return Enum(
-            self._UInt16('ProtectionStatus'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             NoProtection=0x0000,
             ReadOnly=0x0001,
         )
 
     def _AssociationType(self, **vendor_associations):
         return Enum(
-            self._UInt16('AssociationType'),
-            _default_=Pass,
+            self._UInt16,
+            default=Pass,
             Undefined=0x0000,
             GenericFolder=0x0001,
             Album=0x0002,
@@ -638,8 +563,8 @@ class PTPDevice(object):
 
     def _AssociationDesc(self, **vendor_associations):
         return Enum(
-            self._UInt32('AssociationDesc'),
-            _default_=Pass,
+            self._UInt32,
+            default=Pass,
             Undefined=0x00000000,
             DefaultPlaybackData=0x00000003,
             ImagesPerRow=0x00000006,
@@ -649,26 +574,25 @@ class PTPDevice(object):
     def _ObjectInfo(self):
         '''Return desired endianness for ObjectInfo'''
         return Struct(
-            'ObjectInfo',
-            self._StorageID,
-            Rename('ObjectFormat', self._ObjectFormatCode),
-            self._ProtectionStatus,
-            self._UInt32('ObjectCompressedSize'),
-            Rename('ThumbFormat', self._ObjectFormatCode),
-            self._UInt32('ThumbCompressedSize'),
-            self._UInt32('ThumbPixWidth'),
-            self._UInt32('ThumbPixHeight'),
-            self._UInt32('ImagePixWidth'),
-            self._UInt32('ImagePixHeight'),
-            self._UInt32('ImageBitDepth'),
-            Rename('ParentObject', self._ObjectHandle),
-            self._AssociationType,
-            self._AssociationDesc,
-            self._UInt32('SequenceNumber'),
-            self._PTPString('Filename'),
-            self._DateTime('CaptureDate'),
-            self._DateTime('ModificationDate'),
-            self._PTPString('Keywords'),
+            'StorageID' / self._StorageID,
+            'ObjectFormat' / self._ObjectFormatCode,
+            'ProtectionStatus' / self._ProtectionStatus,
+            'ObjectCompressedSize' / self._UInt32,
+            'ThumbFormat' / self._ObjectFormatCode,
+            'ThumbCompressedSize' / self._UInt32,
+            'ThumbPixWidth' / self._UInt32,
+            'ThumbPixHeight' / self._UInt32,
+            'ImagePixWidth' / self._UInt32,
+            'ImagePixHeight' / self._UInt32,
+            'ImageBitDepth' / self._UInt32,
+            'ParentObject' / self._ObjectHandle,
+            'AssociationType' / self._AssociationType,
+            'AssociationDesc' / self._AssociationDesc,
+            'SequenceNumber' / self._UInt32,
+            'Filename' / self._PTPString,
+            'CaptureDate' / self._DateTime,
+            'ModificationDate' / self._DateTime,
+            'Keywords' / self._PTPString,
         )
 
     def _VendorExtensionMap(self):
@@ -676,39 +600,67 @@ class PTPDevice(object):
         # TODO: Integrate vendor extensions and their Enums to parse Native
         # codes to their name.
         return Struct(
-            'VendorExtensionMap',
-            self._UInt16('NativeCode'),
-            self._UInt16('MappedCode'),
-            Rename('MappedVendorExtensionID', self._VendorExtensionID),
+            'NativeCode' / self._UInt16,
+            'MappedCode' / self._UInt16,
+            'MappedVendorExtensionID' / self._VendorExtensionID,
         )
 
     def _VendorExtensionMapArray(self):
         '''Return desired endianness for VendorExtensionMapArray'''
         return PrefixedArray(
+            self._UInt64,
             self._VendorExtensionMap,
-            length_field=self._UInt64('NumberElements'),
         )
 
     # Helper to concretize generic constructors to desired endianness
     # ---------------------------------------------------------------
-    def _set_endian(self, little=False, big=False):
+    def _set_endian(self, endian):
         '''Instantiate constructors to given endianness'''
         # All constructors need to be instantiated before use by setting their
         # endianness. But only those that don't depend on endian-generic
         # constructors need to be explicitly instantiated to a given
         # endianness.
-        self._UInt8 = self._UInt8(_le_=little, _be_=big)
-        self._UInt16 = self._UInt16(_le_=little, _be_=big)
-        self._UInt32 = self._UInt32(_le_=little, _be_=big)
-        self._UInt64 = self._UInt64(_le_=little, _be_=big)
-        self._UInt128 = self._UInt128(_le_=little, _be_=big)
-        self._Int8 = self._Int8(_le_=little, _be_=big)
-        self._Int16 = self._Int16(_le_=little, _be_=big)
-        self._Int32 = self._Int32(_le_=little, _be_=big)
-        self._Int64 = self._Int64(_le_=little, _be_=big)
-        self._Int128 = self._Int128(_le_=little, _be_=big)
+        if endian == 'little':
+            self._UInt8 = Int8ul
+            self._UInt16 = Int16ul
+            self._UInt32 = Int32ul
+            self._UInt64 = Int64ul
+            self._UInt128 = BitsInteger(128, signed=False, swapped=True)
+            self._Int8 = Int8sl
+            self._Int16 = Int16sl
+            self._Int32 = Int32sl
+            self._Int64 = Int64sl
+            self._Int128 = BitsInteger(128, signed=True, swapped=True)
+        elif endian == 'big':
+            self._UInt8 = Int8ub
+            self._UInt16 = Int16ub
+            self._UInt32 = Int32ub
+            self._UInt64 = Int64ub
+            self._UInt128 = BitsInteger(128, signed=False, swapped=False)
+            self._Int8 = Int8sb
+            self._Int16 = Int16sb
+            self._Int32 = Int32sb
+            self._Int64 = Int64sb
+            self._Int128 = BitsInteger(128, signed=True, swapped=False)
+        elif endian == 'native':
+            self._UInt8 = Int8un
+            self._UInt16 = Int16un
+            self._UInt32 = Int32un
+            self._UInt64 = Int64un
+            self._UInt128 = BitsInteger(128, signed=False)
+            self._Int8 = Int8sn
+            self._Int16 = Int16sn
+            self._Int32 = Int32sn
+            self._Int64 = Int64sn
+            self._Int128 = BitsInteger(128, signed=True)
+        else:
+            raise PTPError(
+                'Only little and big endian conventions are supported.'
+            )
 
         # Implicit instantiation. Needs to happen after the above.
+        self._PTPString = self._PTPString()
+        self._DateTime = self._DateTime()
         self._Parameter = self._Parameter()
         self._VendorExtensionID = self._VendorExtensionID()
         self._OperationCode = self._OperationCode()
@@ -1052,18 +1004,16 @@ class PTPDevice(object):
         response = self.recv(ptp)
         return self.__parse_if_data(
             response,
-            self._PTPArray('ObjectHandles', self._ObjectHandle)
+            self._PTPArray(self._ObjectHandle)
         )
 
     def __constructor(self, device_property):
         '''Get the correct constructor using the latest GetDevicePropDesc.'''
         builder = Struct(
-            'Builder',
-            Value(
-                'DataTypeCode',
+            'DataTypeCode' / Computed(
                 lambda ctx: self.__prop_desc[device_property].DataTypeCode
             ),
-            Rename('Value', self._DataType)
+            'Value' / self._DataType
         )
         return builder
 

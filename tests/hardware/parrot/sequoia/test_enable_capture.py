@@ -30,7 +30,7 @@ def set_valid_mask(sequoia, mask):
     '''Set PhotoSensorEnableMask. Return false when invalid.'''
     enable_response = sequoia.set_device_prop_value(
         'PhotoSensorEnableMask',
-        sequoia._UInt32('Mask').build(mask)
+        sequoia._UInt32.build(mask)
     )
     # If the combination of enabled cameras is invalid, skip it.
     if enable_response.ResponseCode == 'InvalidDevicePropValue':
@@ -42,7 +42,7 @@ def set_valid_mask(sequoia, mask):
         sleep(1)
         enable_response = sequoia.set_device_prop_value(
             'PhotoSensorEnableMask',
-            sequoia._UInt32('Mask').build(mask)
+            sequoia._UInt32.build(mask)
         )
     if enable_response.ResponseCode != 'OK':
         print(enable_response)
@@ -61,7 +61,7 @@ def set_keep_on(sequoia, mask):
         sleep(1)
         sequoia.set_device_prop_value(
             'PhotoSensorsKeepOn',
-            sequoia._UInt32('KeepOn').build(1)
+            sequoia._UInt32.build(1)
         )
         keep_on = sequoia.get_device_prop_desc('PhotoSensorsKeepOn')
     assert keep_on.CurrentValue == 1, \
@@ -77,7 +77,7 @@ def unset_keep_on(sequoia):
         sleep(1)
         sequoia.set_device_prop_value(
             'PhotoSensorsKeepOn',
-            sequoia._UInt32('KeepOn').build(0)
+            sequoia._UInt32.build(0)
         )
         keep_on = sequoia.get_device_prop_desc('PhotoSensorsKeepOn')
     assert keep_on.CurrentValue == 0, \
@@ -117,7 +117,7 @@ class TestSequoiaEnableCapture(TestSequoia):
             if keep_on.CurrentValue == 1:
                 sequoia.set_device_prop_value(
                     'PhotoSensorsKeepOn',
-                    sequoia._UInt32('KeepOn').build(0)
+                    sequoia._UInt32.build(0)
                 )
                 sleep(5)
             unset_keep_on(sequoia)
@@ -134,7 +134,7 @@ class TestSequoiaEnableCapture(TestSequoia):
             if keep_on.CurrentValue == 1:
                 sequoia.set_device_prop_value(
                     'PhotoSensorsKeepOn',
-                    sequoia._UInt32('KeepOn').build(0)
+                    sequoia._UInt32.build(0)
                 )
 
             # If mask is invalid, skip.

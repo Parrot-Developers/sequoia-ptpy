@@ -85,7 +85,7 @@ class PTPDevice(object):
 
     def _Sunshine(self):
         return ExprAdapter(
-            self._PTPArray('Sunshine', self._UInt32('Int')),
+            self._PTPArray(self._UInt32),
             encoder=lambda obj, ctx: [
                 obj.Green, obj.Red, obj.RedEdge, obj.NIR,
             ],
@@ -96,7 +96,7 @@ class PTPDevice(object):
 
     def _Temperature(self):
         return ExprAdapter(
-            self._PTPArray('Temperature', self._Int32('Int')),
+            self._PTPArray(self._Int32),
             encoder=lambda obj, ctx: [
                 obj.P7, obj.P7MU, obj.DDR. obj.WiFi, obj.IMU, obj.IMUSunshine
             ],
@@ -108,7 +108,7 @@ class PTPDevice(object):
 
     def _Angle(self):
         return ExprAdapter(
-            self._PTPArray('Angle', self._UInt32('Int')),
+            self._PTPArray(self._UInt32),
             encoder=lambda obj, ctx: [obj.Yaw, obj.Pitch, obj.Roll],
             decoder=lambda obj, ctx: Container(
                 Yaw=obj[0], Pitch=obj[1], Roll=obj[2]
@@ -117,7 +117,7 @@ class PTPDevice(object):
 
     def _GPS(self):
         return ExprAdapter(
-            self._PTPArray('GPS', self._UInt32('Int')),
+            self._PTPArray(self._UInt32),
             encoder=lambda obj, ctx: [
                 obj.Longitude.Deg, obj.Longitude.Min, obj.Longitude.Sec,
                 obj.Latitude.Deg, obj.Latitude.Min, obj.Latitude.Sec,
@@ -132,7 +132,7 @@ class PTPDevice(object):
 
     def _Gyroscope(self):
         return ExprAdapter(
-            self._PTPArray('Gyroscope', self._UInt32('Int')),
+            self._PTPArray(self._UInt32),
             encoder=lambda obj, ctx: [obj.X, obj.Y, obj.Z],
             decoder=lambda obj, ctx: Container(
                 X=obj[0], Y=obj[1], Z=obj[2],
@@ -141,7 +141,7 @@ class PTPDevice(object):
 
     def _Accelerometer(self):
         return ExprAdapter(
-            self._PTPArray('Accelerometer', self._UInt32('Int')),
+            self._PTPArray(self._UInt32),
             encoder=lambda obj, ctx: [obj.X, obj.Y, obj.Z],
             decoder=lambda obj, ctx: Container(
                 X=obj[0], Y=obj[1], Z=obj[2],
@@ -150,7 +150,7 @@ class PTPDevice(object):
 
     def _Magnetometer(self):
         return ExprAdapter(
-            self._PTPArray('Magnetometer', self._UInt32('Int')),
+            self._PTPArray(self._UInt32),
             encoder=lambda obj, ctx: [obj.X, obj.Y, obj.Z],
             decoder=lambda obj, ctx: Container(
                 X=obj[0], Y=obj[1], Z=obj[2],
@@ -159,7 +159,7 @@ class PTPDevice(object):
 
     def _IMU(self):
         return ExprAdapter(
-            self._PTPArray('IMU', self._UInt32('Int')),
+            self._PTPArray(self._UInt32),
             encoder=lambda obj, ctx: [
                 obj.Gyroscope.X,
                 obj.Gyroscope.Y,
@@ -184,36 +184,36 @@ class PTPDevice(object):
 
     def _Status(self):
         return BitStruct(
-            'Status',
-            Flag('CameraRunning'),
-            Flag('MainImuCalibRunning'),
-            Flag('AuxiliaryImuCalibRunning'),
-            Flag('AuxiliaryConnected'),
-            Flag('GpsRunning'),
-            Flag('RemoteGpsRunning'),
-            Flag('CamNumber01Error'),
-            Flag('CamNumber02Error'),
-            Flag('CamNumber03Error'),
-            Flag('CamNumber04Error'),
-            Flag('CamNumber05Error'),
-            Flag('CamNumber06Error'),
-            Flag('CamNumber07Error'),
-            Flag('CamNumber08Error'),
-            Flag('CamNumber09Error'),
-            Flag('CamNumber10Error'),
-            Flag('CamNumber11Error'),
-            Flag('CamNumber12Error'),
-            Flag('CamNumber13Error'),
-            Flag('CamNumber14Error'),
-            Flag('CamNumber15Error'),
-            Flag('CamNumber16Error'),
-            # If new flags are defined, the padding should be asjusted.
+            'CameraRunning' / Flag,
+            'MainImuCalibRunning' / Flag,
+            'AuxiliaryImuCalibRunning' / Flag,
+            'AuxiliaryConnected' / Flag,
+            'GpsRunning' / Flag,
+            'RemoteGpsRunning' / Flag,
+            'CamNumber01Error' / Flag,
+            'CamNumber02Error' / Flag,
+            'CamNumber03Error' / Flag,
+            'CamNumber04Error' / Flag,
+            'CamNumber05Error' / Flag,
+            'CamNumber06Error' / Flag,
+            'CamNumber07Error' / Flag,
+            'CamNumber08Error' / Flag,
+            'CamNumber09Error' / Flag,
+            'CamNumber10Error' / Flag,
+            'CamNumber11Error' / Flag,
+            'CamNumber12Error' / Flag,
+            'CamNumber13Error' / Flag,
+            'CamNumber14Error' / Flag,
+            'CamNumber15Error' / Flag,
+            'CamNumber16Error' / Flag,
+            # If new flags are defined, the padding should be adjusted.
             Padding(10),
         )
 
     def _MagnetoStatus(self):
         return Enum(
-            self._UInt32('MagnetoStatus'),
+            self._UInt32,
+            default=Pass,
             CalibrationOk=1,
             CalibrationRunning=2,
             CalibrationRollPending=3,
@@ -221,15 +221,10 @@ class PTPDevice(object):
             CalibrationYawPending=5,
             CalibrationFailed=6,
             CalibrationAborted=7,
-            _default_=Pass,
         )
 
-    def _set_endian(self, little=False, big=False):
-        ptp.PTPDevice._set_endian(
-            self,
-            little=False,
-            big=False
-        )
+    def _set_endian(self, endian):
+        ptp.PTPDevice._set_endian(self, endian)
         self._Sunshine = self._Sunshine()
         self._Temperature = self._Temperature()
         self._Angle = self._Angle()

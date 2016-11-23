@@ -93,7 +93,11 @@ class USBTransport(object):
     def _shutdown(self):
         self.__event_shutdown.set()
         # Free USB resource on shutdown.
-        self.__event_proc.join()
+
+        # Only join a running thread.
+        if self.__event_proc.is_alive():
+            self.__event_proc.join(2)
+
         usb.util.release_interface(self.__dev, self.__intf)
 
     # Helper methods.

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from ptpy.usb_transport import USBTransport
+from ptpy import PTPy
 # TODO Fix import once ptpy module is better structured.
 
-camera = USBTransport()
+camera = PTPy()
 with camera.session():
     print('Initiating open capture')
     capture = camera.initiate_open_capture()

@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-from ptpy.usb_transport import USBTransport
-# TODO Fix import once ptpy module is better structured.
+from ptpy import PTPy
 
-camera = USBTransport()
+camera = PTPy()
 with camera.session():
     while True:
         evt = camera.event()

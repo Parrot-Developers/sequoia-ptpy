@@ -107,6 +107,10 @@ A proof-of-concept USB implementation is provided using PyUSB. Though it might
 not work with all USB controllers in cameras today. In some operating systems,
 it might be necessary to be `root` in order to access USB devices directly.
 
+For the USB transport, the `_shutdown` method is provided to explicitly release
+the USB interface. At the end of the Python interpreter session this will happen
+automatically.
+
 # Extensions
 
 ## State of the art

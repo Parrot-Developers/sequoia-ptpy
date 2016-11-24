@@ -20,6 +20,7 @@ from construct import (
 from contextlib import contextmanager
 from dateutil.parser import parse as iso8601
 from datetime import datetime
+import six
 
 # Module specific
 # _______________
@@ -310,7 +311,7 @@ class PTPDevice(object):
                 [] if len(obj) == 0 else [ord(c) for c in unicode(obj)]+[0],
             decoder=lambda obj, ctx:
                 u''.join(
-                [unichr(o) for o in obj]
+                [six.unichr(o) for o in obj]
                 ).split('\x00')[0],
             )
 
@@ -818,7 +819,7 @@ class PTPDevice(object):
 
     def __code(self, name_or_code, constructor):
         '''Helper method to get the code for an Enum constructor.'''
-        if isinstance(name_or_code, basestring):
+        if isinstance(name_or_code, six.string_types):
             try:
                 code = constructor.encoding[name_or_code]
             except Exception:
@@ -900,7 +901,7 @@ class PTPDevice(object):
 
         If `reset_all` is `True`, the device_property can be `None`.
         '''
-        if isinstance(device_property, basestring):
+        if isinstance(device_property, six.string_types):
             try:
                 code = self._PropertyCode.encoding[device_property]
             except Exception:

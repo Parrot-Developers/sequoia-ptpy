@@ -6,6 +6,7 @@ support more operations.
 '''
 from __future__ import absolute_import
 import usb.core
+import six
 from usb.util import (
     endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK, ENDPOINT_TYPE_INTR,
     ENDPOINT_OUT, ENDPOINT_IN,
@@ -17,7 +18,7 @@ from construct import (
 )
 from threading import Thread, Event
 from threading import enumerate as threading_enumerate
-from Queue import Queue
+from six.moves.queue import Queue
 import atexit
 
 
@@ -393,10 +394,10 @@ if __name__ == "__main__":
     for dev in devs:
         camera = USBTransport(dev)
         device_info = camera.get_device_info()
-        print device_info
+        print(device_info)
         with camera.session():
             for prop in device_info.DevicePropertiesSupported:
-                print camera.get_device_prop_desc(prop)
+                print(camera.get_device_prop_desc(prop))
                 value = camera.get_device_prop_value(prop)
-                print value
-                print camera.set_device_prop_value(prop, value.Data)
+                print(value)
+                print(camera.set_device_prop_value(prop, value.Data))

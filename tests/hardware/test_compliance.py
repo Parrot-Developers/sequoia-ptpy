@@ -1,4 +1,4 @@
-from test_camera import TestCamera
+from .test_camera import TestCamera
 
 
 class TestCompliance(TestCamera):

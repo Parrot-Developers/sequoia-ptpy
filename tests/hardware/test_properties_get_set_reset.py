@@ -1,4 +1,4 @@
-from test_camera import TestCamera
+from .test_camera import TestCamera
 from construct import Computed, Struct
 
 

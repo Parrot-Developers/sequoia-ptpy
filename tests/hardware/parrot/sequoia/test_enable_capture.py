@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 from time import sleep, time
-from test_sequoia import TestSequoia
+from .test_sequoia import TestSequoia
 import pytest
 
 # Verify that there are at least N images added after an InitiateCapture with N

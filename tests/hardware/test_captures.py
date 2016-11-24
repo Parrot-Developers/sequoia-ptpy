@@ -1,5 +1,5 @@
 from time import time
-from test_camera import TestCamera
+from .test_camera import TestCamera
 import pytest
 
 
@@ -22,7 +22,7 @@ class TestCapture(TestCamera):
             while time() - tic < 10:
                 evt = camera.event()
                 if evt:
-                    print evt
+                    print(evt)
                     if evt.TransactionID == capture.TransactionID:
                         codes.append(evt.EventCode)
 

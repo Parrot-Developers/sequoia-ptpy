@@ -1,4 +1,4 @@
-from test_sequoia import TestSequoia
+from .test_sequoia import TestSequoia
 
 
 class TestOperationValues(TestSequoia):

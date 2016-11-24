@@ -5,7 +5,7 @@ available_camera = None
 try:
     available_camera = ptpy.PTPy(knowledge=False)
 except Exception as e:
-    print e
+    print(e)
     pass
 
 

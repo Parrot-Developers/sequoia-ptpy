@@ -6,6 +6,9 @@ ISO15740:2013(E).
 This implementation is transport agnostic and can be used along with USB,
 serial or IP layers to communicate with PTP compliant cameras.
 
+The entire codebase, tools and examples are compatible with both Python 3 and
+Python 2.
+
 # Basic Usage
 
 PTPy accomodates both the low-level developers wishing to test their PTP

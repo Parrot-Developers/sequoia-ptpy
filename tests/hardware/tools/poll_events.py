@@ -6,4 +6,4 @@ with camera.session():
     while True:
         evt = camera.event()
         if evt:
-            print evt
+            print(evt)

@@ -807,13 +807,12 @@ class PTPDevice(object):
 
     def __name(self, name_or_code, constructor):
         '''Helper method to get the code for an Enum constructor.'''
+        name = name_or_code
         if isinstance(name_or_code, int):
             try:
                 name = constructor.decoding[name_or_code]
             except Exception:
-                raise PTPError('Unknown property code. Try with a name?')
-        else:
-            name = name_or_code
+                pass
 
         return name
 

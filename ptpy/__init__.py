@@ -45,7 +45,7 @@ def ptpy_factory(transport, extension=None):
 
 class PTPy(object):
     '''Class for all transports, extensions and basic PTP functionality'''
-    def __new__(cls, device=None, extension=None, transport=None, raw=False, **kwargs):
+    def __new__(cls, device=None, extension=None, transport=None, knowledge=True, raw=False, **kwargs):
         '''Instantiate the correct class for a device automatically.'''
         # Determine transport
         if transport is None:
@@ -76,12 +76,12 @@ class PTPy(object):
                 transport,
                 extension
             )
-        return PTPy(device)
-
-    def __init__(self, device=None, extension=None, transport=None, knowledge=True, raw=False):
         # Query the device for information on all its properties and update
         # when there are changes.
-        if knowledge:
-            self._obtain_the_knowledge()
+        instance = PTPy(device)
+        if knowledge and not raw:
+            instance._obtain_the_knowledge()
+
+        return instance
 
 __all__ = (PTPy, PTPyError)

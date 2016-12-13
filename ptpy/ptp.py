@@ -308,7 +308,7 @@ class PTPDevice(object):
         return ExprAdapter(
             PrefixedArray(self._UInt8, self._UInt16),
             encoder=lambda obj, ctx:
-                [] if len(obj) == 0 else [ord(c) for c in unicode(obj)]+[0],
+                [] if len(obj) == 0 else [ord(c) for c in six.text_type(obj)]+[0],
             decoder=lambda obj, ctx:
                 u''.join(
                 [six.unichr(o) for o in obj]

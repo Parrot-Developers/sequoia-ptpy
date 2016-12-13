@@ -14,7 +14,7 @@ from usb.util import (
 from ..ptp import PTPError
 from construct import (
     Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
-    Int16ul, Int32ul
+    Int16ul, Int32ul, Pass
 )
 from threading import Thread, Event
 from threading import enumerate as threading_enumerate
@@ -146,6 +146,7 @@ class USBTransport(object):
         self.__Length = Int32ul
         self.__Type = Enum(
                 Int16ul,
+                default=Pass,
                 Undefined=0x0000,
                 Command=0x0001,
                 Data=0x0002,

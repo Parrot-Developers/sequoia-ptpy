@@ -1020,7 +1020,7 @@ class PTPDevice(object):
     def get_device_prop_desc(self, device_property):
         '''Retrieve the property description.
 
-        Accepts a property name of a number.
+        Accepts a property name or a number.
         '''
         code = self.__code(device_property, self._PropertyCode)
         device_property = self.__name(device_property, self._PropertyCode)

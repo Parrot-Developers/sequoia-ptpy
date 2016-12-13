@@ -386,18 +386,3 @@ class USBTransport(object):
             evt = self.__recv(event=True, wait=False, raw=True)
             if evt is not None:
                 self.__event_queue.put(evt)
-
-
-# TODO: Move this to the examples folder, with PTPy instead of USBTransport
-if __name__ == "__main__":
-    devs = find_usb_cameras()
-    for dev in devs:
-        camera = USBTransport(dev)
-        device_info = camera.get_device_info()
-        print(device_info)
-        with camera.session():
-            for prop in device_info.DevicePropertiesSupported:
-                print(camera.get_device_prop_desc(prop))
-                value = camera.get_device_prop_value(prop)
-                print(value)
-                print(camera.set_device_prop_value(prop, value.Data))

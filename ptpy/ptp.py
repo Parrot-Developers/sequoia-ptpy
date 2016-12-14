@@ -746,6 +746,9 @@ class PTPDevice(object):
         '''
         # TODO: Deal with devices that only support one session (where
         # SessionID must be always 1, like some older Canon cameras.)
+        # TODO: Deal with devices that only support one arbitrary session where
+        # the ID is communicated to the initiator after an OpenSession attempt.
+        # This might also account for the above.
         if not self.__session_open:
             try:
                 self.open_session()

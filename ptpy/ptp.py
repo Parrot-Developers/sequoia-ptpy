@@ -398,7 +398,7 @@ class PTPDevice(object):
             'StorageType' / self._StorageType,
             'FilesystemType' / self._FilesystemType,
             'AccessCapability' / self._AccessCapability,
-            'MacCapacity' / self._UInt64,
+            'MaxCapacity' / self._UInt64,
             'FreeSpaceInBytes' / self._UInt64,
             'FreeSpaceInImages' / self._UInt32,
             'StorageDescription' / self._PTPString,

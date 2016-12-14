@@ -4,11 +4,9 @@ It is transport agnostic and requires a transport layer to provide the missing
 methods in the class :py:class`PTPDevice`.
 
 Convenience structures are provided to pack messages. These are native-endian
-and may need to be adapted to transport-endianness:
-
-    SessionID()  # returns native endian constructor
-    SessionID(le=True)  # returns little endian constructor
-    SessionID(be=True)  # returns big endian constructor
+and may need to be adapted to transport-endianness by calling
+`_set_endian(endianness)` where `endianness` can be `'big'`, `'little'` or
+`'native'`.
 '''
 from construct import (
     Array, BitsInteger, Container, Embedded, Enum, ExprAdapter,
@@ -740,9 +738,10 @@ class PTPDevice(object):
         Once transport specific interfaces are defined, this allows easier,
         more nuclear sessions:
 
-            ptp = PTPUSB()
-            with ptp.session():
-                ptp.get_device_info()
+            from ptpy import PTPy
+            camera = PTPy()
+            with camera.session():
+                camera.get_device_info()
         '''
         # TODO: Deal with devices that only support one session (where
         # SessionID must be always 1, like some older Canon cameras.)
@@ -800,7 +799,6 @@ class PTPDevice(object):
 
     # Operation-specific methods and helpers
     # --------------------------------------
-    # TODO: use this option automatically from wrapper PTPy class.
     __has_the_knowledge = False
 
     def __parse_if_data(self, response, constructor):

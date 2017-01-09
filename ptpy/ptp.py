@@ -992,13 +992,14 @@ class PTPDevice(object):
             raise ValueError(
                 'Cannot get both root and {}'.format(object_handle)
             )
+        code = self.__code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='GetObjectHandles',
             SessionID=self.__session,
             TransactionID=self.__transaction,
             Parameter=[
                 0xffffffff if all_storage_ids else storage_id,
-                0xffffffff if all_formats else object_format,
+                0xffffffff if all_formats else code,
                 0xffffffff if in_root else object_handle
             ]
         )

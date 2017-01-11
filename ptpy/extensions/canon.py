@@ -4,6 +4,10 @@ Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
 from .. import ptp
+from construct import (
+    Container, Struct
+)
+import six
 
 __all__ = ('PTPDevice',)
 
@@ -170,4 +174,209 @@ class PTPDevice(object):
             **product_filesystem_types
         )
 
-    # TODO: Implement extension specific operations.
+    # TODO: Decode Canon specific events and properties.
+    def _set_endian(self, endian):
+        ptp.PTPDevice._set_endian(self, endian)
+        # TODO: Instantiate Canon specific structures here.
+
+    # TODO: implement GetObjectSize
+    # TODO: implement SetObjectArchive
+    # TODO: implement KeepDeviceOn
+    # TODO: implement LockDeviceUI
+    # TODO: implement UnlockDeviceUI
+    # TODO: implement GetObjectHandleByName
+    # TODO: implement InitiateReleaseControl
+    # TODO: implement TerminateReleaseControl
+    # TODO: implement TerminatePlaybackMode
+    # TODO: implement ViewfinderOn
+    # TODO: implement ViewfinderOff
+    # TODO: implement DoAeAfAwb
+    # TODO: implement GetCustomizeSpec
+    # TODO: implement GetCustomizeItemInfo
+    # TODO: implement GetCustomizeData
+    # TODO: implement SetCustomizeData
+    # TODO: implement GetCaptureStatus
+    # TODO: implement CheckEvent
+    # TODO: implement FocusLock
+    # TODO: implement FocusUnlock
+    # TODO: implement GetLocalReleaseParam
+    # TODO: implement SetLocalReleaseParam
+    # TODO: implement AskAboutPcEvf
+    # TODO: implement SendPartialObject
+    # TODO: implement InitiateCaptureInMemory
+    # TODO: implement GetPartialObjectEx
+    # TODO: implement SetObjectTime
+    # TODO: implement GetViewfinderImage
+    # TODO: implement GetObjectAttributes
+    # TODO: implement ChangeUSBProtocol
+    # TODO: implement GetChanges
+    # TODO: implement GetObjectInfoEx
+    # TODO: implement InitiateDirectTransfer
+    # TODO: implement TerminateDirectTransfer
+    # TODO: implement SendObjectInfoByPath
+    # TODO: implement SendObjectByPath
+    # TODO: implement InitiateDirectTansferEx
+    # TODO: implement GetAncillaryObjectHandles
+    # TODO: implement GetTreeInfo
+    # TODO: implement GetTreeSize
+    # TODO: implement NotifyProgress
+    # TODO: implement NotifyCancelAccepted
+    # TODO: implement GetDirectory
+    # TODO: implement SetPairingInfo
+    # TODO: implement GetPairingInfo
+    # TODO: implement DeletePairingInfo
+    # TODO: implement GetMACAddress
+    # TODO: implement SetDisplayMonitor
+    # TODO: implement PairingComplete
+    # TODO: implement GetWirelessMAXChannel
+    # TODO: implement EOSGetStorageIDs
+    # TODO: implement EOSGetStorageInfo
+    # TODO: implement EOSGetObjectInfo
+    # TODO: implement EOSGetObject
+    # TODO: implement EOSDeleteObject
+    # TODO: implement EOSFormatStore
+    # TODO: implement EOSGetPartialObject
+    # TODO: implement EOSGetDeviceInfoEx
+    # TODO: implement EOSGetObjectInfoEx
+    # TODO: implement EOSGetThumbEx
+    # TODO: implement EOSSendPartialObject
+    # TODO: implement EOSSetObjectAttributes
+    # TODO: implement EOSGetObjectTime
+    # TODO: implement EOSSetObjectTime
+
+    def eos_remote_release(self):
+        '''Release shutter remotely on EOS cameras'''
+        ptp = Container(
+            OperationCode='EOSRemoteRelease',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.recv(ptp)
+        return response
+
+    # TODO: implement EOSSetDevicePropValueEx
+    # TODO: implement EOSGetRemoteMode
+
+    def eos_set_remote_mode(self, mode):
+        '''Set remote mode on EOS cameras'''
+
+        # TODO: Add automatic translation of remote mode codes and names.
+        code = mode
+        ptp = Container(
+            OperationCode='EOSSetRemoteMode',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[code]
+        )
+        response = self.recv(ptp)
+        return response
+
+    def eos_event_mode(self, mode):
+        '''Set event mode on EOS cameras'''
+        # Canon extension uses this to enrich the events returned by the camera
+        # as well as allowing for polling at the convenience of the initiator.
+
+        # TODO: Add automatic translation of event mode codes and names.
+        code = mode
+        ptp = Container(
+            OperationCode='EOSSetEventMode',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[code]
+        )
+        response = self.recv(ptp)
+        return response
+
+    def eos_get_event(self):
+        '''Poll EOS camera for EOS events'''
+        ptp = Container(
+            OperationCode='EOSGetEvent',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.recv(ptp)
+        # TODO: parse EOS events automatically
+        return response
+
+    # TODO: implement EOSTransferComplete
+    # TODO: implement EOSCancelTransfer
+    # TODO: implement EOSResetTransfer
+    # TODO: implement EOSPCHDDCapacity
+    # TODO: implement EOSSetUILock
+    # TODO: implement EOSResetUILock
+    # TODO: implement EOSKeepDeviceOn
+    # TODO: implement EOSSetNullPacketMode
+    # TODO: implement EOSUpdateFirmware
+    # TODO: implement EOSTransferCompleteDT
+    # TODO: implement EOSCancelTransferDT
+    # TODO: implement EOSSetWftProfile
+    # TODO: implement EOSGetWftProfile
+    # TODO: implement EOSSetProfileToWft
+
+    # TODO: implement method convenience method for bulb captures
+    def eos_bulb_start(self):
+        '''Begin bulb capture on EOS cameras'''
+        ptp = Container(
+            OperationCode='EOSBulbStart',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.recv(ptp)
+        return response
+
+    def eos_bulb_end(self):
+        '''End bulb capture on EOS cameras'''
+        ptp = Container(
+            OperationCode='EOSBulbEnd',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.recv(ptp)
+        return response
+
+    # TODO: implement EOSRequestDevicePropValue
+    # TODO: implement EOSRemoteReleaseOn
+    # TODO: implement EOSRemoteReleaseOff
+    # TODO: implement EOSInitiateViewfinder
+    # TODO: implement EOSTerminateViewfinder
+    # TODO: implement EOSGetViewFinderData
+    # TODO: implement EOSDoAf
+
+    def eos_drive_lens(self, infinity=True, steps=1):
+        '''
+        Drive lens focus on EOS cameras with an auto-focus lens on.
+
+
+        If `infinity` is `True`, the focal plane is driven away from the camera
+        the given number of steps.
+        '''
+
+        # TODO: Check these assumptions.
+        if steps >= 0x8000:
+            steps = 0x8000 - 1
+        if steps < 0x0000:
+            steps = 0
+        instruction = 0x8000 if infinity else 0x0000
+        instruction |= steps
+
+        ptp = Container(
+            OperationCode='EOSDriveLens',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[instruction]
+        )
+        response = self.recv(ptp)
+        return response
+
+    # TODO: implement EOSDepthOfFieldPreview
+    # TODO: implement EOSClickWB
+    # TODO: implement EOSZoom
+    # TODO: implement EOSZoomPosition
+    # TODO: implement EOSSetLiveAfFrame
+    # TODO: implement EOSAfCancel
+    # TODO: implement EOSFAPIMessageTX
+    # TODO: implement EOSFAPIMessageRX

@@ -304,8 +304,29 @@ class PTPDevice(object):
     # TODO: implement EOSCancelTransfer
     # TODO: implement EOSResetTransfer
     # TODO: implement EOSPCHDDCapacity
-    # TODO: implement EOSSetUILock
-    # TODO: implement EOSResetUILock
+
+    def eos_set_ui_lock(self):
+        '''Lock user interface on EOS cameras'''
+        ptp = Container(
+            OperationCode='EOSSetUILock',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.send(ptp)
+        return response
+
+    def eos_reset_ui_lock(self):
+        '''Unlock user interface on EOS cameras'''
+        ptp = Container(
+            OperationCode='EOSResetUILock',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        response = self.send(ptp)
+        return response
+
     # TODO: implement EOSKeepDeviceOn
     # TODO: implement EOSSetNullPacketMode
     # TODO: implement EOSUpdateFirmware

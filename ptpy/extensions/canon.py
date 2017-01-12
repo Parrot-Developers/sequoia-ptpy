@@ -252,7 +252,7 @@ class PTPDevice(object):
             TransactionID=self.__transaction,
             Parameter=[]
         )
-        response = self.recv(ptp)
+        response = self.send(ptp)
         return response
 
     # TODO: implement EOSSetDevicePropValueEx
@@ -269,7 +269,7 @@ class PTPDevice(object):
             TransactionID=self.__transaction,
             Parameter=[code]
         )
-        response = self.recv(ptp)
+        response = self.send(ptp)
         return response
 
     def eos_event_mode(self, mode):
@@ -285,7 +285,7 @@ class PTPDevice(object):
             TransactionID=self.__transaction,
             Parameter=[code]
         )
-        response = self.recv(ptp)
+        response = self.send(ptp)
         return response
 
     def eos_get_event(self):
@@ -324,7 +324,7 @@ class PTPDevice(object):
             TransactionID=self.__transaction,
             Parameter=[]
         )
-        response = self.recv(ptp)
+        response = self.send(ptp)
         return response
 
     def eos_bulb_end(self):
@@ -335,7 +335,7 @@ class PTPDevice(object):
             TransactionID=self.__transaction,
             Parameter=[]
         )
-        response = self.recv(ptp)
+        response = self.send(ptp)
         return response
 
     # TODO: implement EOSRequestDevicePropValue
@@ -369,7 +369,7 @@ class PTPDevice(object):
             TransactionID=self.__transaction,
             Parameter=[instruction]
         )
-        response = self.recv(ptp)
+        response = self.send(ptp)
         return response
 
     # TODO: implement EOSDepthOfFieldPreview

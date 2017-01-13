@@ -5,7 +5,7 @@ extension. This is why inheritance is not explicit.
 '''
 from .. import ptp
 from construct import (
-    Container, Struct
+    Range, Container, Enum, PrefixedArray, Struct, Pass, Switch
 )
 import six
 
@@ -174,10 +174,46 @@ class PTPDevice(object):
             **product_filesystem_types
         )
 
+    def _EOSEventCode(self):
+        return Enum(
+            self._UInt16,
+            default=Pass,
+            EventsDone=0x0000,
+            ObjectAdded=0xC181,
+            DevicePropChanged=0xC189,
+            DevicePropValueAccepted=0xC18A,
+            Capture=0xC18B,
+            HalfPushReleaseButton=0xC18E,
+        )
+
+    def _EOSPropertyCode(self):
+        return Enum(
+            self._UInt16,
+            default=Pass,
+            Aperture=0xD101,
+            ShutterSpeed=0xD102,
+            ISO=0xD103,
+            ExposureCompensation=0xD104,
+            ShootingMode=0xD105,
+            DriveMode=0xD106,
+            ExposureMeteringMode=0xD107,
+            AutoFocusMode=0xD108,
+            WhiteBalance=0xD109,
+            PictureStyle=0xD110,
+            TransferOption=0xD111,
+            UnixTime=0xD113,
+            ImageQuality=0xD120,
+            LiveView=0xD1B0,
+            AvailableShots=0xD11B,
+            CaptureDestination=0xD11C,
+            BracketMode=0xD11D,
+        )
+
     # TODO: Decode Canon specific events and properties.
     def _set_endian(self, endian):
         ptp.PTPDevice._set_endian(self, endian)
-        # TODO: Instantiate Canon specific structures here.
+        self._EOSPropertyCode = self._EOSPropertyCode()
+        self._EOSEventCode = self._EOSEventCode()
 
     # TODO: implement GetObjectSize
     # TODO: implement SetObjectArchive

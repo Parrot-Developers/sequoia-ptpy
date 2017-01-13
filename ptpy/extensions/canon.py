@@ -5,7 +5,8 @@ extension. This is why inheritance is not explicit.
 '''
 from .. import ptp
 from construct import (
-    Range, Container, Enum, PrefixedArray, Struct, Pass, Switch
+    Array, Container, Enum, ExprAdapter, Pass, PrefixedArray, Range, Struct,
+    Switch, this, Probe, Embedded
 )
 import six
 
@@ -175,20 +176,45 @@ class PTPDevice(object):
         )
 
     def _EOSEventCode(self):
+        '''Return desired endianness for Canon EOS event codes'''
         return Enum(
-            self._UInt16,
+            self._UInt32,
             default=Pass,
-            EventsDone=0x0000,
+            EmptyEvent=0x0000,
+            RequestGetEvent=0xC101,
             ObjectAdded=0xC181,
+            ObjectRemoved=0xC182,
+            RequestGetObjectInfoEx=0xC183,
+            StorageStatusChanged=0xC184,
+            StorageInfoChanged=0xC185,
+            RequestObjectTransfer=0xC186,
+            ObjectInfoChangedEx=0xC187,
+            ObjectContentChanged=0xC188,
             DevicePropChanged=0xC189,
-            DevicePropValueAccepted=0xC18A,
-            Capture=0xC18B,
-            HalfPushReleaseButton=0xC18E,
+            AvailListChanged=0xC18A, # TODO: DevicePropValueAccepted?
+            CameraStatusChanged=0xC18B,
+            WillSoonShutdown=0xC18D,
+            ShutdownTimerUpdated=0xC18E, # TODO: HalfPushReleaseButton?
+            RequestCancelTransfer=0xC18F,
+            RequestObjectTransferDT=0xC190,
+            RequestCancelTransferDT=0xC191,
+            StoreAdded=0xC192,
+            StoreRemoved=0xC193,
+            BulbExposureTime=0xC194,
+            RecordingTime=0xC195,
+            RequestObjectTransferTS=0xC1A2,
+            AfResult=0xC1A3,
+            CTGInfoCheckComplete=0xC1A4,
+            OLCInfoChanged=0xC1A5,
+            ObjectAddedUnknown=0xC1A7,
+            RequestObjectTransferNew=0xC1A9,
+            RequestObjectTransferFTP=0xC1F1,
         )
 
     def _EOSPropertyCode(self):
+        '''Return desired endianness for Canon EOS property codes'''
         return Enum(
-            self._UInt16,
+            self._UInt32,
             default=Pass,
             Aperture=0xD101,
             ShutterSpeed=0xD102,
@@ -199,14 +225,201 @@ class PTPDevice(object):
             ExposureMeteringMode=0xD107,
             AutoFocusMode=0xD108,
             WhiteBalance=0xD109,
+            ColorTemperature=0xD10A,
+            WhiteBalanceAdjustA=0xD10B,
+            WhiteBalanceAdjustB=0xD10C,
+            WhiteBalanceXA=0xD10D,
+            WhiteBalanceXB=0xD10E,
+            ColorSpace=0xD10F,
             PictureStyle=0xD110,
-            TransferOption=0xD111,
-            UnixTime=0xD113,
-            ImageQuality=0xD120,
-            LiveView=0xD1B0,
+            BatteryPower=0xD111,
+            BatterySelect=0xD112,
+            CameraTime=0xD113,
+            AutoPowerOff=0xD114,
+            Owner=0xD115,
+            ModelID=0xD116,
+            PTPExtensionVersion=0xD119,
+            DPOFVersion=0xD11A,
             AvailableShots=0xD11B,
             CaptureDestination=0xD11C,
             BracketMode=0xD11D,
+            CurrentStorage=0xD11E,
+            CurrentFolder=0xD11F,
+            ImageFormat=0xD120,
+            ImageFormatCF=0xD121,
+            ImageFormatSD=0xD122,
+            ImageFormatHDD=0xD123,
+            CompressionS=0xD130,
+            CompressionM1=0xD131,
+            CompressionM2=0xD132,
+            CompressionL=0xD133,
+            AEModeDial=0xD138,
+            AEModeCustom=0xD139,
+            MirrorUpSetting=0xD13A,
+            HighlightTonePriority=0xD13B,
+            AFSelectFocusArea=0xD13C,
+            HDRSetting=0xD13D,
+            PCWhiteBalance1=0xD140,
+            PCWhiteBalance2=0xD141,
+            PCWhiteBalance3=0xD142,
+            PCWhiteBalance4=0xD143,
+            PCWhiteBalance5=0xD144,
+            MWhiteBalance=0xD145,
+            MWhiteBalanceEx=0xD146,
+            PictureStyleStandard=0xD150,
+            PictureStylePortrait=0xD151,
+            PictureStyleLandscape=0xD152,
+            PictureStyleNeutral=0xD153,
+            PictureStyleFaithful=0xD154,
+            PictureStyleBlackWhite=0xD155,
+            PictureStyleAuto=0xD156,
+            PictureStyleUserSet1=0xD160,
+            PictureStyleUserSet2=0xD161,
+            PictureStyleUserSet3=0xD162,
+            PictureStyleParam1=0xD170,
+            PictureStyleParam2=0xD171,
+            PictureStyleParam3=0xD172,
+            HighISOSettingNoiseReduction=0xD178,
+            MovieServoAF=0xD179,
+            ContinuousAFValid=0xD17A,
+            Attenuator=0xD17B,
+            UTCTime=0xD17C,
+            Timezone=0xD17D,
+            Summertime=0xD17E,
+            FlavorLUTParams=0xD17F,
+            CustomFunc1=0xD180,
+            CustomFunc2=0xD181,
+            CustomFunc3=0xD182,
+            CustomFunc4=0xD183,
+            CustomFunc5=0xD184,
+            CustomFunc6=0xD185,
+            CustomFunc7=0xD186,
+            CustomFunc8=0xD187,
+            CustomFunc9=0xD188,
+            CustomFunc10=0xD189,
+            CustomFunc11=0xD18A,
+            CustomFunc12=0xD18B,
+            CustomFunc13=0xD18C,
+            CustomFunc14=0xD18D,
+            CustomFunc15=0xD18E,
+            CustomFunc16=0xD18F,
+            CustomFunc17=0xD190,
+            CustomFunc18=0xD191,
+            CustomFunc19=0xD192,
+            InnerDevelop=0xD193,
+            MultiAspect=0xD194,
+            MovieSoundRecord=0xD195,
+            MovieRecordVolume=0xD196,
+            WindCut=0xD197,
+            ExtenderType=0xD198,
+            OLCInfoVersion=0xD199,
+            CustomFuncEx=0xD1A0,
+            MyMenu=0xD1A1,
+            MyMenuList=0xD1A2,
+            WftStatus=0xD1A3,
+            WftInputTransmission=0xD1A4,
+            HDDDirectoryStructure=0xD1A5,
+            BatteryInfo=0xD1A6,
+            AdapterInfo=0xD1A7,
+            LensStatus=0xD1A8,
+            QuickReviewTime=0xD1A9,
+            CardExtension=0xD1AA,
+            TempStatus=0xD1AB,
+            ShutterCounter=0xD1AC,
+            SpecialOption=0xD1AD,
+            PhotoStudioMode=0xD1AE,
+            SerialNumber=0xD1AF,
+            EVFOutputDevice=0xD1B0,
+            EVFMode=0xD1B1,
+            DepthOfFieldPreview=0xD1B2,
+            EVFSharpness=0xD1B3,
+            EVFWBMode=0xD1B4,
+            EVFClickWBCoeffs=0xD1B5,
+            EVFColorTemp=0xD1B6,
+            ExposureSimMode=0xD1B7,
+            EVFRecordStatus=0xD1B8,
+            LvAfSystem=0xD1BA,
+            MovSize=0xD1BB,
+            LvViewTypeSelect=0xD1BC,
+            MirrorDownStatus=0xD1BD,
+            MovieParam=0xD1BE,
+            MirrorLockupState=0xD1BF,
+            FlashChargingState=0xD1C0,
+            AloMode=0xD1C1,
+            FixedMovie=0xD1C2,
+            OneShotRawOn=0xD1C3,
+            ErrorForDisplay=0xD1C4,
+            AEModeMovie=0xD1C5,
+            BuiltinStroboMode=0xD1C6,
+            StroboDispState=0xD1C7,
+            StroboETTL2Metering=0xD1C8,
+            ContinousAFMode=0xD1C9,
+            MovieParam2=0xD1CA,
+            StroboSettingExpComposition=0xD1CB,
+            MovieParam3=0xD1CC,
+            LVMedicalRotate=0xD1CF,
+            Artist=0xD1D0,
+            Copyright=0xD1D1,
+            BracketValue=0xD1D2,
+            FocusInfoEx=0xD1D3,
+            DepthOfField=0xD1D4,
+            Brightness=0xD1D5,
+            LensAdjustParams=0xD1D6,
+            EFComp=0xD1D7,
+            LensName=0xD1D8,
+            AEB=0xD1D9,
+            StroboSetting=0xD1DA,
+            StroboWirelessSetting=0xD1DB,
+            StroboFiring=0xD1DC,
+            LensID=0xD1DD,
+            LCDBrightness=0xD1DE,
+            CADarkBright=0xD1DF,
+        )
+
+    def _EOSEventRecords(self):
+        '''Return desired endianness for EOS Event Records constructor'''
+        return Range(
+            # The dataphase can be about as long as a 32 bit unsigned int.
+            0, 0xFFFFFFFF,
+            self._EOSEventRecord
+        )
+
+    def _EOSEventRecord(self):
+        '''Return desired endianness for a single EOS Event Record'''
+        return Struct(
+            'Bytes' / self._UInt32,
+            Embedded(Struct(
+                'EventCode' / self._EOSEventCode,
+                'Record' / Switch(
+                    lambda ctx: ctx.EventCode,
+                    {
+                        'DevicePropChanged':
+                        Embedded(Struct(
+                            'PropertyCode' / self._EOSPropertyCode,
+                            'Enumeration' / Array(
+                                lambda ctx: ctx._._.Bytes/4 - 3,
+                                # TODO: Automatically decode each property
+                                # code's enumeration values.
+                                self._UInt32
+                            ),
+                        )),
+                        'DevicePropValueAccepted':
+                        Embedded(Struct(
+                            'PropertyCode' / self._EOSPropertyCode,
+                            'Enumeration' / Array(
+                                # TODO: Verify if this is actually an
+                                # enumeration.
+                                lambda ctx: ctx._._.Bytes/4 - 3,
+                                self._UInt32
+                            )
+                        )),
+                    },
+                    default=Array(
+                        lambda ctx: ctx._.Bytes / 4 - 2,
+                        self._UInt32
+                    )
+                )
+            ))
         )
 
     # TODO: Decode Canon specific events and properties.
@@ -214,6 +427,8 @@ class PTPDevice(object):
         ptp.PTPDevice._set_endian(self, endian)
         self._EOSPropertyCode = self._EOSPropertyCode()
         self._EOSEventCode = self._EOSEventCode()
+        self._EOSEventRecord = self._EOSEventRecord()
+        self._EOSEventRecords = self._EOSEventRecords()
 
     # TODO: implement GetObjectSize
     # TODO: implement SetObjectArchive

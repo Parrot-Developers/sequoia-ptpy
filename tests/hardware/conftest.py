@@ -13,7 +13,10 @@ except Exception as e:
 @pytest.fixture(scope='session', autouse=True)
 def camera():
     if available_camera is None:
-        pytest.skip('No camera available to test')
+        if not pytest.config.getoption('--expect-camera'):
+            pytest.skip('No camera available to test')
+        else:
+            pytest.fail('Expected a camera but None was found')
     return available_camera
 
 

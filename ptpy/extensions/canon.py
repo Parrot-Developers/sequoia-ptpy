@@ -555,6 +555,17 @@ class PTPDevice(object):
     # TODO: implement EOSCancelTransfer
     # TODO: implement EOSResetTransfer
     # TODO: implement EOSPCHDDCapacity
+    def eos_pc_hdd_capacity(self, todo0=0xfffffff8, todo1=0x1000, todo2=0x1):
+        '''Tell EOS camera about PC hard drive capacity'''
+        # TODO: Figure out what to send exactly.
+        ptp = Container(
+            OperationCode='EOSPCHDDCapacity',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[todo0, todo1, todo2]
+        )
+        response = self.mesg(ptp)
+        return response
 
     def eos_set_ui_lock(self):
         '''Lock user interface on EOS cameras'''
@@ -611,8 +622,39 @@ class PTPDevice(object):
         return response
 
     # TODO: implement EOSRequestDevicePropValue
-    # TODO: implement EOSRemoteReleaseOn
-    # TODO: implement EOSRemoteReleaseOff
+
+    def eos_remote_release_on(self, full=False):
+        '''
+        Remote control shutter press for EOS cameras
+
+        This is the equivalent of pressing the shutter button: all the way in
+        if `full` or half-way otherwise.
+        '''
+        ptp = Container(
+            OperationCode='EOSRemoteReleaseOn',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[0x2 if full else 0x1]
+        )
+        response = self.mesg(ptp)
+        return response
+
+    def eos_remote_release_off(self, full=False):
+        '''
+        Remote control shutter release for EOS cameras
+
+        This is the equivalent of releasing the shutter button: from all the
+        way in if `full` or from half-way otherwise.
+        '''
+        ptp = Container(
+            OperationCode='EOSRemoteReleaseOff',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[0x2 if full else 0x1]
+        )
+        response = self.mesg(ptp)
+        return response
+
     # TODO: implement EOSInitiateViewfinder
     # TODO: implement EOSTerminateViewfinder
     # TODO: implement EOSGetViewFinderData

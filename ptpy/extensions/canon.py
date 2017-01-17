@@ -191,10 +191,10 @@ class PTPDevice(object):
             ObjectInfoChangedEx=0xC187,
             ObjectContentChanged=0xC188,
             DevicePropChanged=0xC189,
-            AvailListChanged=0xC18A, # TODO: DevicePropValueAccepted?
+            AvailListChanged=0xC18A,
             CameraStatusChanged=0xC18B,
             WillSoonShutdown=0xC18D,
-            ShutdownTimerUpdated=0xC18E, # TODO: HalfPushReleaseButton?
+            ShutdownTimerUpdated=0xC18E,
             RequestCancelTransfer=0xC18F,
             RequestObjectTransferDT=0xC190,
             RequestCancelTransferDT=0xC191,
@@ -403,7 +403,7 @@ class PTPDevice(object):
                                 self._UInt32
                             ),
                         )),
-                        'DevicePropValueAccepted':
+                        'AvailListChanged':
                         Embedded(Struct(
                             'PropertyCode' / self._EOSPropertyCode,
                             'Enumeration' / Array(

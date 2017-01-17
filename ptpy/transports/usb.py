@@ -16,7 +16,7 @@ from construct import (
     Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
     Int16ul, Int32ul, Pass
 )
-from threading import Thread, Event
+from threading import Thread, Event, RLock
 from threading import enumerate as threading_enumerate
 from six.moves.queue import Queue
 import atexit
@@ -86,6 +86,10 @@ class USBTransport(object):
         usb.util.claim_interface(self.__dev, self.__intf)
         self.__event_queue = Queue()
         self.__event_shutdown = Event()
+        # Locks for different end points.
+        self.__inep_lock= RLock()
+        self.__intep_lock= RLock()
+        self.__outep_lock= RLock()
         self.__event_proc = Thread(target=self.__poll_events)
         self.__event_proc.daemon = False
         atexit.register(self._shutdown)
@@ -257,34 +261,39 @@ class USBTransport(object):
         '''Helper method for receiving non-event data.'''
         # TODO: clear stalls automatically
         ep = self.__intep if event else self.__inep
-        try:
-            usbdata = ep.read(ep.wMaxPacketSize, timeout=0 if wait else 5)
-        except usb.core.USBError as e:
-            # Ignore timeout or busy device once.
-            if e.errno == 110 or e.errno == 16:
-                if event:
-                    return None
+        lock = self.__intep_lock if event else self.__inep_lock
+        with lock:
+            try:
+                usbdata = ep.read(
+                    ep.wMaxPacketSize,
+                    timeout=0 if wait else 5
+                )
+            except usb.core.USBError as e:
+                # Ignore timeout or busy device once.
+                if e.errno == 110 or e.errno == 16:
+                    if event:
+                        return None
+                    else:
+                        usbdata = ep.read(
+                            ep.wMaxPacketSize,
+                            timeout=5000
+                        )
                 else:
-                    usbdata = ep.read(
-                        ep.wMaxPacketSize,
-                        timeout=5000
-                    )
-            else:
-                raise e
-        header = self.__ResponseHeader.parse(
-            bytearray(usbdata[0:self.__Header.sizeof()])
-        )
-        if header.Type not in ['Response', 'Data', 'Event']:
-            raise PTPError(
-                'Unexpected USB transfer type.'
-                'Expected Response, Event or Data but reveived {}'
-                .format(header.Type)
+                    raise e
+            header = self.__ResponseHeader.parse(
+                bytearray(usbdata[0:self.__Header.sizeof()])
             )
-        while len(usbdata) < header.Length:
-            usbdata += ep.read(
-                ep.wMaxPacketSize,
-                timeout=5000
-            )
+            if header.Type not in ['Response', 'Data', 'Event']:
+                raise PTPError(
+                    'Unexpected USB transfer type.'
+                    'Expected Response, Event or Data but received {}'
+                    .format(header.Type)
+                )
+            while len(usbdata) < header.Length:
+                usbdata += ep.read(
+                    ep.wMaxPacketSize,
+                    timeout=5000
+                )
         if raw:
             return usbdata
         else:
@@ -293,13 +302,15 @@ class USBTransport(object):
     def __send(self, ptp_container, event=False):
         '''Helper method for sending data.'''
         ep = self.__intep if event else self.__outep
+        lock = self.__intep_lock if event else self.__outep_lock
         transaction = self.__CommandTransaction.build(ptp_container)
-        try:
-            ep.write(transaction, timeout=1)
-        except usb.core.USBError as e:
-            # Ignore timeout or busy device once.
-            if e.errno == 110 or e.errno == 16:
-                ep.write(transaction, timeout=5000)
+        with lock:
+            try:
+                ep.write(transaction, timeout=1)
+            except usb.core.USBError as e:
+                # Ignore timeout or busy device once.
+                if e.errno == 110 or e.errno == 16:
+                    ep.write(transaction, timeout=5000)
 
     def __send_request(self, ptp_container):
         '''Send PTP request without checking answer.'''

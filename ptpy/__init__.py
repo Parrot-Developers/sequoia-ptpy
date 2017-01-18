@@ -6,6 +6,15 @@ from .extensions.parrot import PTPDevice as parrot
 from .ptp import PTPDevice, PTPError
 from .transports.usb import USBTransport as usb
 
+import os
+import coloredlogs
+
+# Set up full logging level when DEBUG is defined as in the environment
+coloredlogs.install(
+    level='DEBUG' if 'DEBUG' in os.environ else 'INFO',
+    fmt='%(levelname)s %(asctime)s %(name)s[%(threadName)s] %(message)s'
+)
+
 class PTPyError(Exception):
     pass
 

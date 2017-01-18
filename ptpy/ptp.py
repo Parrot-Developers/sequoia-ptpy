@@ -18,7 +18,10 @@ from construct import (
 from contextlib import contextmanager
 from dateutil.parser import parse as iso8601
 from datetime import datetime
+import logging
 import six
+
+logger = logging.getLogger(__name__)
 
 # Module specific
 # _______________
@@ -748,14 +751,18 @@ class PTPDevice(object):
         # TODO: Deal with devices that only support one arbitrary session where
         # the ID is communicated to the initiator after an OpenSession attempt.
         # This might also account for the above.
+        logger.debug('Session requested')
         if not self.__session_open:
+            logger.debug('Open session')
             try:
                 self.open_session()
                 yield
             finally:
+                logger.debug('Close session')
                 if self.__session_open:
                     self.close_session()
         else:
+            logger.debug('Using outer session')
             yield
 
     @contextmanager
@@ -831,6 +838,7 @@ class PTPDevice(object):
 
     def _obtain_the_knowledge(self):
         '''Initialise an internal representation of device behaviour.'''
+        logger.debug('Gathering info about all device properties')
         self.__device_info = self.get_device_info()
         self.__prop_desc = {}
         with self.session():
@@ -1037,6 +1045,7 @@ class PTPDevice(object):
         # Update the knowledge on response.
         if self.__has_the_knowledge and hasattr(response, 'Data'):
             device_property = self.__name(device_property, self._PropertyCode)
+            logger.debug('Updating knowledge of {}'.format(device_property))
             self.__prop_desc[device_property] = result
         return result
 

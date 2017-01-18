@@ -5,8 +5,9 @@ implementation are Vendor agnostic. Vendor extensions should extend these to
 support more operations.
 '''
 from __future__ import absolute_import
+import atexit
+import logging
 import usb.core
-import six
 from usb.util import (
     endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK, ENDPOINT_TYPE_INTR,
     ENDPOINT_OUT, ENDPOINT_IN,
@@ -19,11 +20,12 @@ from construct import (
 from threading import Thread, Event, RLock
 from threading import enumerate as threading_enumerate
 from six.moves.queue import Queue
-import atexit
 
+logger = logging.getLogger(__name__)
 
 __all__ = ('USBTransport', 'find_usb_cameras')
 __author__ = 'Luis Mario Domenzain'
+
 
 PTP_USB_CLASS = 6
 
@@ -62,6 +64,7 @@ class USBTransport(object):
     '''Implement USB transport.'''
     def __init__(self, dev=None):
         '''Instantiate the first available PTP device over USB'''
+        logger.debug('Init')
         self.__setup_constructors()
         # If no device is specified, find all devices claiming to be Cameras
         # and get the USB endpoints for the first one that works.
@@ -90,12 +93,13 @@ class USBTransport(object):
         self.__inep_lock= RLock()
         self.__intep_lock= RLock()
         self.__outep_lock= RLock()
-        self.__event_proc = Thread(target=self.__poll_events)
+        self.__event_proc = Thread(name='EvtPolling', target=self.__poll_events)
         self.__event_proc.daemon = False
         atexit.register(self._shutdown)
         self.__event_proc.start()
 
     def _shutdown(self):
+        logger.debug('Shutdown request')
         self.__event_shutdown.set()
         # Free USB resource on shutdown.
 
@@ -258,7 +262,7 @@ class USBTransport(object):
         return response
 
     def __recv(self, event=False, wait=False, raw=False):
-        '''Helper method for receiving non-event data.'''
+        '''Helper method for receiving data.'''
         # TODO: clear stalls automatically
         ep = self.__intep if event else self.__inep
         lock = self.__intep_lock if event else self.__inep_lock
@@ -344,13 +348,30 @@ class USBTransport(object):
     # ---------------------
     def send(self, ptp_container, data):
         '''Transfer operation with dataphase from initiator to responder'''
+        logger.debug('SEND {}{}'.format(
+            ptp_container.OperationCode,
+            ' ' + str(tuple(map(hex, ptp_container.Parameter)))
+            if ptp_container.Parameter else '',
+        ))
         self.__send_request(ptp_container)
         self.__send_data(ptp_container, data)
         # Get response and sneak in implicit SessionID and missing parameters.
-        return self.__recv()
+        response = self.__recv()
+        logger.debug('SEND {} {}{}'.format(
+            ptp_container.OperationCode,
+            response.ResponseCode,
+            ' ' + str(tuple(map(hex, response.Parameter)))
+            if ptp_container.Parameter else '',
+        ))
+        return response
 
     def recv(self, ptp_container):
         '''Transfer operation with dataphase from responder to initiator.'''
+        logger.debug('RECV {}{}'.format(
+            ptp_container.OperationCode,
+            ' ' + str(tuple(map(hex, ptp_container.Parameter)))
+            if ptp_container.Parameter else '',
+        ))
         self.__send_request(ptp_container)
         dataphase = self.__recv()
         if hasattr(dataphase, 'Data'):
@@ -366,16 +387,35 @@ class USBTransport(object):
                     'Dataphase does not match with requested operation.'
                 )
             response['Data'] = dataphase.Data
-            return response
         else:
-            return dataphase
+            response = dataphase
+
+        logger.debug('RECV {} {}{}'.format(
+            ptp_container.OperationCode,
+            response.ResponseCode,
+            ' ' + str(tuple(map(hex, response.Parameter)))
+            if ptp_container.Parameter else '',
+        ))
+        return response
 
     def mesg(self, ptp_container):
         '''Transfer operation without dataphase.'''
+        logger.debug('MESG {}{}'.format(
+            ptp_container.OperationCode,
+            ' ' + str(tuple(map(hex, ptp_container.Parameter)))
+            if ptp_container.Parameter else '',
+        ))
         self.__send_request(ptp_container)
         # Get response and sneak in implicit SessionID and missing parameters
         # for FullResponse.
-        return self.__recv()
+        response = self.__recv()
+        logger.debug('MESG {} {}{}'.format(
+            ptp_container.OperationCode,
+            response.ResponseCode,
+            ' ' + str(tuple(map(hex, response.Parameter)))
+            if ptp_container.Parameter else '',
+        ))
+        return response
 
     def event(self, wait=False):
         '''Check event.
@@ -397,4 +437,5 @@ class USBTransport(object):
         while not self.__event_shutdown.is_set() and _main_thread_alive():
             evt = self.__recv(event=True, wait=False, raw=True)
             if evt is not None:
+                logger.debug('Event queued')
                 self.__event_queue.put(evt)

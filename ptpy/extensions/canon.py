@@ -8,6 +8,8 @@ from construct import (
     Array, Container, Enum, ExprAdapter, Pass, PrefixedArray, Range, Struct,
     Switch, this, Probe, Embedded
 )
+import logging
+logger = logging.getLogger(__name__)
 
 __all__ = ('PTPDevice',)
 

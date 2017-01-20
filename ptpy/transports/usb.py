@@ -75,17 +75,22 @@ class USBTransport(object):
             if self.__setup_device(dev):
                 break
         else:
-            raise PTPError('No USB PTP device found.')
+            message = 'No USB PTP device found.'
+            logger.error(message)
+            raise PTPError(message)
 
         if self.__dev.is_kernel_driver_active(self.__intf.bInterfaceNumber):
             try:
                 self.__dev.detach_kernel_driver(self.__intf.bInterfaceNumber)
                 usb.util.claim_interface(self.__dev, self.__intf)
             except usb.core.USBError:
-                raise PTPError(
-                        'Could not detach kernel driver.\n'
-                        'Maybe the camera is mounted?'
-                        )
+                message = (
+                    'Could not detach kernel driver. '
+                    'Maybe the camera is mounted?'
+                )
+                logger.error(message)
+                raise PTPError(message)
+        logger.debug('Claiming {}'.format(repr(dev)))
         usb.util.claim_interface(self.__dev, self.__intf)
         self.__event_queue = Queue()
         self.__event_shutdown = Event()
@@ -107,6 +112,7 @@ class USBTransport(object):
         if self.__event_proc.is_alive():
             self.__event_proc.join(2)
 
+        logger.debug('Release {}'.format(repr(self.__dev)))
         usb.util.release_interface(self.__dev, self.__intf)
 
     # Helper methods.
@@ -140,6 +146,9 @@ class USBTransport(object):
                     self.__outep = None
                     self.__intep = None
                 else:
+                    logger.debug('Found {}'.format(repr(self.__inep)))
+                    logger.debug('Found {}'.format(repr(self.__outep)))
+                    logger.debug('Found {}'.format(repr(self.__intep)))
                     self.__cfg = cfg
                     self.__dev = dev
                     self.__intf = intf
@@ -350,7 +359,7 @@ class USBTransport(object):
         '''Transfer operation with dataphase from initiator to responder'''
         logger.debug('SEND {}{}'.format(
             ptp_container.OperationCode,
-            ' ' + str(tuple(map(hex, ptp_container.Parameter)))
+            ' ' + str(list(map(hex, ptp_container.Parameter)))
             if ptp_container.Parameter else '',
         ))
         self.__send_request(ptp_container)
@@ -360,7 +369,7 @@ class USBTransport(object):
         logger.debug('SEND {} {}{}'.format(
             ptp_container.OperationCode,
             response.ResponseCode,
-            ' ' + str(tuple(map(hex, response.Parameter)))
+            ' ' + str(list(map(hex, response.Parameter)))
             if ptp_container.Parameter else '',
         ))
         return response
@@ -369,7 +378,7 @@ class USBTransport(object):
         '''Transfer operation with dataphase from responder to initiator.'''
         logger.debug('RECV {}{}'.format(
             ptp_container.OperationCode,
-            ' ' + str(tuple(map(hex, ptp_container.Parameter)))
+            ' ' + str(list(map(hex, ptp_container.Parameter)))
             if ptp_container.Parameter else '',
         ))
         self.__send_request(ptp_container)
@@ -393,8 +402,8 @@ class USBTransport(object):
         logger.debug('RECV {} {}{}'.format(
             ptp_container.OperationCode,
             response.ResponseCode,
-            ' ' + str(tuple(map(hex, response.Parameter)))
-            if ptp_container.Parameter else '',
+            ' ' + str(list(map(hex, response.Parameter)))
+            if response.Parameter else '',
         ))
         return response
 
@@ -402,7 +411,7 @@ class USBTransport(object):
         '''Transfer operation without dataphase.'''
         logger.debug('MESG {}{}'.format(
             ptp_container.OperationCode,
-            ' ' + str(tuple(map(hex, ptp_container.Parameter)))
+            ' ' + str(list(map(hex, ptp_container.Parameter)))
             if ptp_container.Parameter else '',
         ))
         self.__send_request(ptp_container)
@@ -412,8 +421,8 @@ class USBTransport(object):
         logger.debug('MESG {} {}{}'.format(
             ptp_container.OperationCode,
             response.ResponseCode,
-            ' ' + str(tuple(map(hex, response.Parameter)))
-            if ptp_container.Parameter else '',
+            ' ' + str(list(map(hex, response.Parameter)))
+            if response.Parameter else '',
         ))
         return response
 

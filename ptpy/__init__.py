@@ -8,6 +8,9 @@ from .transports.usb import USBTransport as usb
 
 import os
 import coloredlogs
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Set up full logging level when DEBUG is defined as in the environment
 coloredlogs.install(
@@ -58,6 +61,7 @@ class PTPy(object):
         '''Instantiate the correct class for a device automatically.'''
         # Determine transport
         if transport is None:
+            logging.debug('Determining available transports')
             # TODO: Implement discovery across transports once PTPIP is added.
             transport = usb
 
@@ -79,8 +83,10 @@ class PTPy(object):
 
         # Instantiate and construct.
         if raw:
+            logging.debug('Raw PTP only')
             PTPy = ptpy_factory(transport)
         else:
+            logging.debug('Imposing {} extension'.format(extension))
             PTPy = ptpy_factory(
                 transport,
                 extension

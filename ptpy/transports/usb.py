@@ -201,8 +201,6 @@ class USBTransport(object):
         # specified in ISO15740:2013(E), no device respects it and the session
         # number is implicit over USB.
         self.__Param = Range(0, 5, self._Parameter)
-        self.__FullParam = Struct(Array(5, self._Parameter))
-        self.__FullEventParam = Struct(Array(3, self._Parameter))
         self.__CommandTransactionBase = Struct(
                 Embedded(self.__CommandHeader),
                 'Payload' / Bytes(
@@ -224,19 +222,6 @@ class USBTransport(object):
                 )
         self.__ResponseTransaction = ExprAdapter(
                 self.__ResponseTransactionBase,
-                encoder=lambda obj, ctx, h=self.__Header: Container(
-                    Length=len(obj.Payload) + h.sizeof(),
-                    **obj
-                    ),
-                decoder=lambda obj, ctx: obj,
-                )
-        self.__EventTransactionBase = Struct(
-                Embedded(self.__EventHeader),
-                'Payload' / Bytes(
-                      lambda ctx, h=self.__Header: ctx.Length - h.sizeof()),
-                )
-        self.__EventTransaction = ExprAdapter(
-                self.__EventTransactionBase,
                 encoder=lambda obj, ctx, h=self.__Header: Container(
                     Length=len(obj.Payload) + h.sizeof(),
                     **obj

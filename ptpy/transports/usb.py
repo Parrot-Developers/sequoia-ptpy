@@ -62,17 +62,19 @@ def find_usb_cameras():
 
 class USBTransport(object):
     '''Implement USB transport.'''
-    def __init__(self, dev=None):
+    def __init__(self, device=None):
         '''Instantiate the first available PTP device over USB'''
-        logger.debug('Init')
+        logger.debug('Init USB')
         self.__setup_constructors()
         # If no device is specified, find all devices claiming to be Cameras
         # and get the USB endpoints for the first one that works.
-        cameras = find_usb_cameras()
-        devs = [dev] if (dev is not None) else cameras
+        if device is None:
+            logger.debug('No device provided, probing all USB devices.')
+        devs = [device] if (device is not None) else find_usb_cameras()
 
         for dev in devs:
             if self.__setup_device(dev):
+                logger.debug('Found USB PTP device {}'.format(dev))
                 break
         else:
             message = 'No USB PTP device found.'

@@ -97,10 +97,13 @@ class USBTransport(object):
         self.__event_queue = Queue()
         self.__event_shutdown = Event()
         # Locks for different end points.
-        self.__inep_lock= RLock()
-        self.__intep_lock= RLock()
-        self.__outep_lock= RLock()
-        self.__event_proc = Thread(name='EvtPolling', target=self.__poll_events)
+        self.__inep_lock = RLock()
+        self.__intep_lock = RLock()
+        self.__outep_lock = RLock()
+        self.__event_proc = Thread(
+            name='EvtPolling',
+            target=self.__poll_events
+        )
         self.__event_proc.daemon = False
         atexit.register(self._shutdown)
         self.__event_proc.start()

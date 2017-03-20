@@ -93,6 +93,7 @@ class IPTransport(object):
         # Command Connection Establishment
         self.__cmdcon = socket.create_connection((host, port))
         self.__cmdcon.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.__cmdcon.setsockopt(socket.IPPROTO_TCP, socket.SO_KEEPALIVE, 1)
         # Send InitCommand
         # TODO: Allow users to identify as an arbitrary initiator.
         init_cmd_req_payload = self.__InitCommand.build(
@@ -140,6 +141,7 @@ class IPTransport(object):
         # Event Connection Establishment
         self.__evtcon = socket.create_connection((host, port))
         self.__evtcon.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.__evtcon.setsockopt(socket.IPPROTO_TCP, socket.SO_KEEPALIVE, 1)
 
         # Send InitEvent
         payload = self.__InitEvent.build(Container(

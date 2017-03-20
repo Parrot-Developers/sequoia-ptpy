@@ -15,7 +15,12 @@ from six.moves.queue import Queue
 import six
 import socket
 import logging
+from threading import Thread, Event
+from threading import enumerate as threading_enumerate
+from time import sleep
+import atexit
 
+# TODO: Deal with timeouts equivalent to those in the USB transport
 logger = logging.getLogger(__name__)
 
 __all__ = ('IPTransport')
@@ -24,6 +29,11 @@ __author__ = 'Luis Mario Domenzain'
 # TODO: Implement discovery mechanisms for PTP/IP like zeroconf.
 
 
+def _main_thread_alive():
+    return any(
+        (i.name == "MainThread") and i.is_alive() for i in
+        threading_enumerate())
+
 class IPTransport(object):
     '''Implement IP transport.'''
     def __init__(self, device=None):
@@ -31,6 +41,7 @@ class IPTransport(object):
         self.__setup_constructors()
         logger.debug('Init IP')
 
+        self.__dev = device
         if device is None:
             raise NotImplementedError(
                 'IP discovery not implemented. Please provide a device.'
@@ -45,6 +56,31 @@ class IPTransport(object):
         # Establish Command/Data Connection.
         # Establish Event Connection.
         self.__event_queue = Queue()
+        self.__event_proc = Thread(
+            name='EvtPolling',
+            target=self.__poll_events
+        )
+        self.__event_proc.daemon = False
+        atexit.register(self._shutdown)
+        self.__event_shutdown = Event()
+        self.__event_proc.start()
+
+    def _shutdown(self):
+        logger.debug('Shutdown request')
+        self.__event_shutdown.set()
+        # Free USB resource on shutdown.
+
+        # Only join a running thread.
+        if self.__event_proc.is_alive():
+            self.__event_proc.join(2)
+
+        logger.debug('Close connections for {}'.format(repr(self.__dev)))
+        # TODO: Should connections be established/closed on OpenSession
+        # TODO: instead?
+        self.__evtcon.shutdown(socket.SHUT_RDWR)
+        self.__cmdcon.shutdown(socket.SHUT_RDWR)
+        self.__evtcon.close()
+        self.__cmdcon.close()
 
     def __setup_connection(self, host=None, port=15740):
         '''Establish a PTP/IP session for a given host'''
@@ -320,7 +356,13 @@ class IPTransport(object):
 
         data = bytes()
         while True:
-            ipdata = ip.recv(hdrlen)
+            try:
+                ipdata = ip.recv(hdrlen)
+            except socket.timeout as e:
+                if event:
+                    return None
+                else:
+                    raise e
             # Read a single entire packet
             while len(ipdata) < hdrlen:
                 ipdata += ip.recv(hdrlen - len(ipdata))
@@ -466,3 +508,12 @@ class IPTransport(object):
             evt = self.__parse_response(ipdata)
 
         return evt
+
+    def __poll_events(self):
+        '''Poll events, adding them to a queue.'''
+        while not self.__event_shutdown.is_set() and _main_thread_alive():
+            evt = self.__recv(event=True, wait=False, raw=True)
+            sleep(5e-3)
+            if evt is not None:
+                logger.debug('Event queued')
+                self.__event_queue.put(evt)

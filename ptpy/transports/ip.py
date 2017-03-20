@@ -308,9 +308,7 @@ class IPTransport(object):
     def __parse_response(self, ipdata):
         '''Helper method for parsing data.'''
         # Build up container with all PTP info.
-        print list(bytes(ipdata))
         response = self.__PacketPayload.parse(ipdata)
-        print response
         # Sneak in an implicit Session ID
         response['SessionID'] = self.session_id
         return response
@@ -344,7 +342,6 @@ class IPTransport(object):
                     'Unexpected PTP/IP packet type {}'
                     .format(header.Type)
                 )
-            logger.debug('Received entire {} packet'.format(header.Type))
             if header.Type not in ['StartData', 'Data', 'EndData']:
                 break
             else:
@@ -369,6 +366,7 @@ class IPTransport(object):
                     )
                 response['Data'] = data
                 response['Type'] = 'Data'
+                return response
 
         if raw:
             # TODO: Deal with raw Data packets??
@@ -412,6 +410,11 @@ class IPTransport(object):
     # ---------------------
     def send(self, ptp_container, data):
         '''Transfer operation with dataphase from initiator to responder'''
+        logger.debug('SEND {}{}'.format(
+            ptp_container.OperationCode,
+            ' ' + str(list(map(hex, ptp_container.Parameter)))
+            if ptp_container.Parameter else '',
+        ))
         self.__send_request(ptp_container)
         self.__send_data(ptp_container, data)
         # Get response and sneak in implicit SessionID and missing parameters.
@@ -419,12 +422,16 @@ class IPTransport(object):
 
     def recv(self, ptp_container):
         '''Transfer operation with dataphase from responder to initiator.'''
+        logger.debug('RECV {}{}'.format(
+            ptp_container.OperationCode,
+            ' ' + str(list(map(hex, ptp_container.Parameter)))
+            if ptp_container.Parameter else '',
+        ))
         self.__send_request(ptp_container)
         dataphase = self.__recv()
         if hasattr(dataphase, 'Data'):
             response = self.__recv()
             if (
-                    (ptp_container.OperationCode != dataphase.OperationCode) or
                     (ptp_container.TransactionID != dataphase.TransactionID) or
                     (ptp_container.SessionID != dataphase.SessionID) or
                     (dataphase.TransactionID != response.TransactionID) or

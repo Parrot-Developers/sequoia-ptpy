@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import atexit
 import logging
 import usb.core
+import six
 from usb.util import (
     endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK, ENDPOINT_TYPE_INTR,
     ENDPOINT_OUT, ENDPOINT_IN,
@@ -37,26 +38,33 @@ def _main_thread_alive():
 
 
 class find_class(object):
-    def __init__(self, class_):
+    def __init__(self, class_, name=None):
         self._class = class_
+        self._name = name
 
     def __call__(self, device):
         if device.bDeviceClass == self._class:
-            return True
+            return (
+                self._name in usb.util.get_string(device, device.iProduct)
+                if self._name else True
+            )
         for cfg in device:
             intf = usb.util.find_descriptor(
                 cfg,
                 bInterfaceClass=self._class
             )
             if intf is not None:
-                return True
+                return (
+                    self._name in usb.util.get_string(device, device.iProduct)
+                    if self._name else True
+                )
         return False
 
 
-def find_usb_cameras():
+def find_usb_cameras(name=None):
         return usb.core.find(
             find_all=True,
-            custom_match=find_class(PTP_USB_CLASS)
+            custom_match=find_class(PTP_USB_CLASS, name=name)
         )
 
 
@@ -70,7 +78,19 @@ class USBTransport(object):
         # and get the USB endpoints for the first one that works.
         if device is None:
             logger.debug('No device provided, probing all USB devices.')
-        devs = [device] if (device is not None) else find_usb_cameras()
+        if isinstance(device, six.string_types):
+            name = device
+            logger.debug(
+                'Device name provided, probing all USB devices for {}.'
+                .format(name)
+            )
+            device = None
+        else:
+            name = None
+        devs = (
+            [device] if (device is not None)
+            else find_usb_cameras(name=name)
+        )
 
         for dev in devs:
             if self.__setup_device(dev):

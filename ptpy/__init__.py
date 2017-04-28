@@ -69,7 +69,7 @@ class PTPy(object):
         if extension is None and not raw:
             plain = ptpy_factory(transport)
             try:
-                plain_camera = plain()
+                plain_camera = plain(device)
             except PTPError:
                 plain_camera = None
 

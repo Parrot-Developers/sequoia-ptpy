@@ -183,31 +183,42 @@ class PTPDevice(object):
         )
 
     def _Status(self):
-        return BitStruct(
-            'CameraRunning' / Flag,
-            'MainImuCalibRunning' / Flag,
-            'AuxiliaryImuCalibRunning' / Flag,
-            'AuxiliaryConnected' / Flag,
-            'GpsRunning' / Flag,
-            'RemoteGpsRunning' / Flag,
-            'CamNumber01Error' / Flag,
-            'CamNumber02Error' / Flag,
-            'CamNumber03Error' / Flag,
-            'CamNumber04Error' / Flag,
-            'CamNumber05Error' / Flag,
-            'CamNumber06Error' / Flag,
-            'CamNumber07Error' / Flag,
-            'CamNumber08Error' / Flag,
-            'CamNumber09Error' / Flag,
-            'CamNumber10Error' / Flag,
-            'CamNumber11Error' / Flag,
-            'CamNumber12Error' / Flag,
-            'CamNumber13Error' / Flag,
-            'CamNumber14Error' / Flag,
-            'CamNumber15Error' / Flag,
-            'CamNumber16Error' / Flag,
-            # If new flags are defined, the padding should be adjusted.
-            Padding(10),
+        # Status flags from LSB to MSB
+        status = [
+            'CameraRunning',
+            'MainImuCalibRunning',
+            'AuxiliaryImuCalibRunning',
+            'AuxiliaryConnected',
+            'GpsRunning',
+            'RemoteGpsRunning',
+            'CamNumber01Error',
+            'CamNumber02Error',
+            'CamNumber03Error',
+            'CamNumber04Error',
+            'CamNumber05Error',
+            'CamNumber06Error',
+            'CamNumber07Error',
+            'CamNumber08Error',
+            'CamNumber09Error',
+            'CamNumber10Error',
+            'CamNumber11Error',
+            'CamNumber12Error',
+            'CamNumber13Error',
+            'CamNumber14Error',
+            'CamNumber15Error',
+            'CamNumber16Error',
+        ]
+        return ExprAdapter(
+            self._UInt32,
+            encoder=lambda obj, ctx: sum(
+                [
+                    0x1 << i if getattr(obj, n, False) else 0
+                    for i, n in enumerate(status)
+                ]
+            ),
+            decoder=lambda obj, ctx: Container(
+                {n: (obj & (0x01 << i)) != 0 for i, n in enumerate(status)}
+            ),
         )
 
     def _MagnetoStatus(self):

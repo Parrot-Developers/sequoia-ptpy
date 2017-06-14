@@ -92,28 +92,8 @@ class USBTransport(object):
             else find_usb_cameras(name=name)
         )
 
-        for dev in devs:
-            if self.__setup_device(dev):
-                logger.debug('Found USB PTP device {}'.format(dev))
-                break
-        else:
-            message = 'No USB PTP device found.'
-            logger.error(message)
-            raise PTPError(message)
+        self.__acquire_camera(devs)
 
-        if self.__dev.is_kernel_driver_active(self.__intf.bInterfaceNumber):
-            try:
-                self.__dev.detach_kernel_driver(self.__intf.bInterfaceNumber)
-                usb.util.claim_interface(self.__dev, self.__intf)
-            except usb.core.USBError:
-                message = (
-                    'Could not detach kernel driver. '
-                    'Maybe the camera is mounted?'
-                )
-                logger.error(message)
-                raise PTPError(message)
-        logger.debug('Claiming {}'.format(repr(dev)))
-        usb.util.claim_interface(self.__dev, self.__intf)
         self.__event_queue = Queue()
         self.__event_shutdown = Event()
         # Locks for different end points.
@@ -127,6 +107,45 @@ class USBTransport(object):
         self.__event_proc.daemon = False
         atexit.register(self._shutdown)
         self.__event_proc.start()
+
+    def __available_cameras(self, devs):
+        for dev in devs:
+            if self.__setup_device(dev):
+                logger.debug('Found USB PTP device {}'.format(dev))
+                yield
+        else:
+            message = 'No USB PTP device found.'
+            logger.error(message)
+            raise PTPError(message)
+
+
+    def __acquire_camera(self, devs):
+        '''From the cameras given, get the first one that does not fail'''
+
+        for _ in self.__available_cameras(devs):
+            try:
+                if self.__dev.is_kernel_driver_active(self.__intf.bInterfaceNumber):
+                    try:
+                        self.__dev.detach_kernel_driver(self.__intf.bInterfaceNumber)
+                        usb.util.claim_interface(self.__dev, self.__intf)
+                    except usb.core.USBError:
+                        message = (
+                            'Could not detach kernel driver. '
+                            'Maybe the camera is mounted?'
+                        )
+                        logger.error(message)
+                logger.debug('Claiming {}'.format(repr(self.__dev)))
+                usb.util.claim_interface(self.__dev, self.__intf)
+            except Exception as e:
+                logger.debug('{}'.format(e))
+                continue
+            break
+        else:
+            message = (
+                'Could acquire any camera.'
+            )
+            logger.error(message)
+            raise PTPError(message)
 
     def _shutdown(self):
         logger.debug('Shutdown request')

@@ -66,7 +66,11 @@ class PTPDevice(object):
 
     def _TransactionID(self):
         '''Return desired endianness for TransactionID'''
-        return self._UInt32
+        return Enum(
+            self._UInt32,
+            default=Pass,
+            NA=0xFFFFFFFF,
+        )
 
     # TODO: Check if these Enums can be replaced with more general
     # associations. Or even with Python Enums. Otherwise there is always a risk

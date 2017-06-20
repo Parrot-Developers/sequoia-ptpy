@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Set up full logging level when DEBUG is defined as in the environment
 coloredlogs.install(
-    level='DEBUG' if 'DEBUG' in os.environ else 'INFO',
+    level='DEBUG' if 'PTPY_DEBUG' in os.environ else 'INFO',
     fmt='%(levelname)s %(asctime)s %(name)s[%(threadName)s] %(message)s'
 )
 

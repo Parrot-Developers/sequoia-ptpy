@@ -40,6 +40,11 @@ class PTPDevice(object):
             MultisensorsIrradianceGain=0xD217,
             MultisensorsIrradianceIntegrationTime=0xD218,
             OverlapRate=0xD219,
+            LEDsEnableMask=0xD220,
+            GPSEnable=0xD221,
+            SelectedStorage=0xD222,
+            MediaFolderName=0xD223,
+            XMPTag=0xD224,
             **product_properties
         )
 
@@ -60,6 +65,7 @@ class PTPDevice(object):
             StopMagnetoCalib=0x9211,
             MagnetoCalibStatus=0x9212,
             SendFirmwareUpdate=0x9213,
+            SetGeotag=0x9400,
             **product_operations
         )
 
@@ -221,6 +227,25 @@ class PTPDevice(object):
             ),
         )
 
+    def _LEDsEnable(self):
+        # Status flags from LSB to MSB
+        leds = [
+            'Body',
+            'Auxiliary',
+        ]
+        return ExprAdapter(
+            self._UInt32,
+            encoder=lambda obj, ctx: sum(
+                [
+                    0x1 << i if getattr(obj, n, False) else 0
+                    for i, n in enumerate(leds)
+                ]
+            ),
+            decoder=lambda obj, ctx: Container(
+                {n: (obj & (0x01 << i)) != 0 for i, n in enumerate(leds)}
+            ),
+        )
+
     def _MagnetoStatus(self):
         return Enum(
             self._UInt32,
@@ -245,6 +270,7 @@ class PTPDevice(object):
         self._Magnetometer = self._Magnetometer()
         self._IMU = self._IMU()
         self._Status = self._Status()
+        self._LEDsEnable = self._LEDsEnable()
         self._MagnetoStatus = self._MagnetoStatus()
 
     def get_sunshine_values(self):

@@ -386,8 +386,10 @@ class USBTransport(object):
     # ---------------------
     def send(self, ptp_container, data):
         '''Transfer operation with dataphase from initiator to responder'''
-        logger.debug('SEND {}{}'.format(
+        datalen = len(data)
+        logger.debug('SEND {} {} bytes{}'.format(
             ptp_container.OperationCode,
+            datalen,
             ' ' + str(list(map(hex, ptp_container.Parameter)))
             if ptp_container.Parameter else '',
         ))
@@ -395,8 +397,9 @@ class USBTransport(object):
         self.__send_data(ptp_container, data)
         # Get response and sneak in implicit SessionID and missing parameters.
         response = self.__recv()
-        logger.debug('SEND {} {}{}'.format(
+        logger.debug('SEND {} {} bytes {}{}'.format(
             ptp_container.OperationCode,
+            datalen,
             response.ResponseCode,
             ' ' + str(list(map(hex, response.Parameter)))
             if ptp_container.Parameter else '',
@@ -428,9 +431,11 @@ class USBTransport(object):
         else:
             response = dataphase
 
-        logger.debug('RECV {} {}{}'.format(
+        logger.debug('RECV {} {}{}{}'.format(
             ptp_container.OperationCode,
             response.ResponseCode,
+            ' {} bytes'.format(len(response.Data))
+            if hasattr(response, 'Data') else '',
             ' ' + str(list(map(hex, response.Parameter)))
             if response.Parameter else '',
         ))

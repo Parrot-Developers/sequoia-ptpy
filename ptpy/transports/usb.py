@@ -21,6 +21,7 @@ from construct import (
 from threading import Thread, Event, RLock
 from threading import enumerate as threading_enumerate
 from six.moves.queue import Queue
+from hexdump import hexdump
 
 logger = logging.getLogger(__name__)
 
@@ -277,6 +278,9 @@ class USBTransport(object):
         '''Helper method for parsing USB data.'''
         # Build up container with all PTP info.
         usbdata = bytearray(usbdata)
+        if logger.isEnabledFor(logging.DEBUG):
+            for l in hexdump(six.binary_type(usbdata), result='generator'):
+                logger.debug(l)
         transaction = self.__ResponseTransaction.parse(usbdata)
         response = Container(
             SessionID=self.session_id,

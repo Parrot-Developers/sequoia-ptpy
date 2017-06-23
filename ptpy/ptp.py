@@ -817,6 +817,11 @@ class PTPDevice(object):
         return (constructor.parse(response.Data)
                 if hasattr(response, 'Data') else None)
 
+    def __build_if_not_data(self, data, constructor):
+        '''If the data is not binary, build it with constructor.'''
+        return (constructor.build(data)
+                if isinstance(data, Container) else data)
+
     def __name(self, name_or_code, constructor):
         '''Helper method to get the code for an Enum constructor.'''
         name = name_or_code

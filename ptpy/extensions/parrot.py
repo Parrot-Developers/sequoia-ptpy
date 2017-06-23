@@ -5,7 +5,7 @@ extension.
 '''
 from .. import ptp
 from construct import (
-    BitStruct, Container, Enum, ExprAdapter, Flag, Padding, Pass
+    Struct, BitStruct, Container, Enum, ExprAdapter, Flag, Padding, Pass
 )
 
 __all__ = ('PTPDevice',)
@@ -259,6 +259,59 @@ class PTPDevice(object):
             CalibrationAborted=7,
         )
 
+    def _Geotag(self):
+        return ExprAdapter(
+            Struct(
+                'ValidityMask' / self._UInt32,
+                'Timestamp' / self._Int64,
+                'Latitude' / self._Int32,
+                'Longitude' / self._Int32,
+                'Altitude' / self._Int32,
+                'Satellites' / self._UInt32,
+                'AccuracyXY' / self._UInt32,
+                'AccuracyZ' / self._UInt32,
+                'NorthSpeed' / self._Int32,
+                'EastSpeed' / self._Int32,
+                'UpSpeed' / self._Int32,
+                'Roll' / self._Int32,
+                'Pitch' / self._Int32,
+                'Yaw' / self._Int32,
+            ),
+            encoder=lambda obj, ctx:
+            Container(
+                ValidityMask=obj.ValidityMask,
+                Timestamp=obj.Timestamp,
+                Latitude=int(obj.Latitude * 10**7),
+                Longitude=int(obj.Longitude * 10**7),
+                Altitude=int(obj.Altitude * 1000),
+                Satellites=obj.Satellites,
+                AccuracyXY=int(obj.AccuracyXY * 1000),
+                AccuracyZ=int(obj.AccuracyZ * 1000),
+                NorthSpeed=int(obj.NorthSpeed * 1000),
+                EastSpeed=int(obj.EastSpeed * 1000),
+                UpSpeed=int(obj.UpSpeed * 1000),
+                Roll=int(obj.Roll * 1000),
+                Pitch=int(obj.Pitch * 1000),
+                Yaw=int(obj.Yaw * 1000),
+            ),
+            decoder=lambda obj, ctx: Container(
+                obj.ValidityMask,
+                obj.Timestamp,
+                obj.Latitude / 10.**7.,
+                obj.Longitude / 10.**7.,
+                obj.Altitude / 1000.,
+                obj.Satellites,
+                obj.AccuracyXY / 1000.,
+                obj.AccuracyZ / 1000.,
+                obj.NorthSpeed / 1000.,
+                obj.EastSpeed / 1000.,
+                obj.UpSpeed / 1000.,
+                obj.Roll / 1000.,
+                obj.Pitch / 1000.,
+                obj.Yaw / 1000.,
+            ),
+        )
+
     def _set_endian(self, endian):
         ptp.PTPDevice._set_endian(self, endian)
         self._Sunshine = self._Sunshine()
@@ -272,6 +325,7 @@ class PTPDevice(object):
         self._Status = self._Status()
         self._LEDsEnable = self._LEDsEnable()
         self._MagnetoStatus = self._MagnetoStatus()
+        self._Geotag = self._Geotag()
 
     def get_sunshine_values(self):
         ptp = Container(
@@ -408,3 +462,13 @@ class PTPDevice(object):
             Parameter=[]
         )
         return self.send(ptp, firmware)
+
+    def set_geotag(self, geotag):
+        geotag = self.__build_if_not_data(geotag, self._Geotag)
+        ptp = Container(
+            OperationCode='SetGeotag',
+            SessionID=self.__session,
+            TransactionID=self.__transaction,
+            Parameter=[]
+        )
+        return self.send(ptp, geotag)

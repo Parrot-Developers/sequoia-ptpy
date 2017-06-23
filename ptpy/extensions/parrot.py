@@ -455,11 +455,12 @@ class PTPDevice(object):
         return self.__parse_if_data(response, self._MagnetoStatus)
 
     def send_firmware(self, firmware):
+        '''Send PLF for update'''
         ptp = Container(
             OperationCode='SendFirmwareUpdate',
             SessionID=self.__session,
             TransactionID=self.__transaction,
-            Parameter=[]
+            Parameter=[len(firmware)]
         )
         return self.send(ptp, firmware)
 

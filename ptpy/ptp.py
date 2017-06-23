@@ -1054,7 +1054,13 @@ class PTPDevice(object):
         # Update the knowledge on response.
         if self.__has_the_knowledge and hasattr(response, 'Data'):
             device_property = self.__name(device_property, self._PropertyCode)
-            logger.debug('Updating knowledge of {}'.format(device_property))
+            logger.debug(
+                'Updating knowledge of {}'
+                .format(
+                    hex(device_property)
+                    if isinstance(device_property, int) else device_property
+                )
+            )
             self.__prop_desc[device_property] = result
         return result
 

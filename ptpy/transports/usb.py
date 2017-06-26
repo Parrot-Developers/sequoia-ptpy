@@ -277,6 +277,7 @@ class USBTransport(object):
     def __parse_response(self, usbdata):
         '''Helper method for parsing USB data.'''
         # Build up container with all PTP info.
+        logger.debug('Transaction:')
         usbdata = bytearray(usbdata)
         if logger.isEnabledFor(logging.DEBUG):
             for l in hexdump(six.binary_type(usbdata), result='generator'):
@@ -286,6 +287,7 @@ class USBTransport(object):
             SessionID=self.session_id,
             TransactionID=transaction.TransactionID,
         )
+        logger.debug('Interpreting {} transaction'.format(transaction.Type))
         if transaction.Type == 'Response':
             response['ResponseCode'] = transaction.ResponseCode
             response['Parameter'] = self.__Param.parse(transaction.Payload)

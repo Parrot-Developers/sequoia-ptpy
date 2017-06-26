@@ -328,6 +328,24 @@ class USBTransport(object):
                         )
                 else:
                     raise e
+
+            if len(usbdata) == 0:
+                if event:
+                    return None
+                else:
+                    raise PTPError('Empty USB read')
+
+            if (
+                    logger.isEnabledFor(logging.DEBUG) and
+                    len(usbdata) < self.__Header.sizeof()
+            ):
+                logger.debug('Initial packet smaller than a header')
+                for l in hexdump(
+                        six.binary_type(bytearray(usbdata)),
+                        result='generator'
+                ):
+                    logger.debug(l)
+
             header = self.__ResponseHeader.parse(
                 bytearray(usbdata[0:self.__Header.sizeof()])
             )

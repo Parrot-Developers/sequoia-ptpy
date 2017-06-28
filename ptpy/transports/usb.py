@@ -310,19 +310,26 @@ class USBTransport(object):
         # TODO: clear stalls automatically
         ep = self.__intep if event else self.__inep
         lock = self.__intep_lock if event else self.__inep_lock
+        usbdata = array.array('B', [])
         with lock:
             try:
-                usbdata = ep.read(
+                usbdata += ep.read(
                     ep.wMaxPacketSize,
                     timeout=0 if wait else 5
                 )
+                if len(usbdata) < self._Header.sizeof():
+                    logger.debug('Initial read smaller than a header')
+                    usbdata += ep.read(
+                        ep.wMaxPacketSize,
+                        timeout=100
+                    )
             except usb.core.USBError as e:
                 # Ignore timeout or busy device once.
                 if e.errno == 110 or e.errno == 16:
                     if event:
                         return None
                     else:
-                        usbdata = ep.read(
+                        usbdata += ep.read(
                             ep.wMaxPacketSize,
                             timeout=5000
                         )
@@ -337,9 +344,9 @@ class USBTransport(object):
 
             if (
                     logger.isEnabledFor(logging.DEBUG) and
-                    len(usbdata) < self.__Header.sizeof()
+                    (len(usbdata) < self.__Header.sizeof())
             ):
-                logger.debug('Initial packet smaller than a header')
+                logger.debug('Incomplete packet')
                 for l in hexdump(
                         six.binary_type(bytearray(usbdata)),
                         result='generator'

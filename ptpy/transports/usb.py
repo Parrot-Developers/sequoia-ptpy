@@ -9,6 +9,7 @@ import atexit
 import logging
 import usb.core
 import six
+import array
 from usb.util import (
     endpoint_type, endpoint_direction, ENDPOINT_TYPE_BULK, ENDPOINT_TYPE_INTR,
     ENDPOINT_OUT, ENDPOINT_IN,

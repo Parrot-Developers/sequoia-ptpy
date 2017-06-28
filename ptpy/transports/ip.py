@@ -15,7 +15,8 @@ from six.moves.queue import Queue
 import six
 import socket
 import logging
-from threading import Thread, Event
+from contextlib import contextmanager
+from threading import Thread, Event, Lock
 from threading import enumerate as threading_enumerate
 from time import sleep
 import atexit
@@ -34,6 +35,34 @@ def _main_thread_alive():
         (i.name == "MainThread") and i.is_alive() for i in
         threading_enumerate())
 
+
+def create_connection(address):
+    """Connect to address and return the socket object. """
+
+    host, port = address
+    err = None
+    for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
+        af, socktype, proto, canonname, sa = res
+        sock = None
+        try:
+            sock = socket.socket(af, socktype, proto)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.SO_KEEPALIVE, 1)
+            sock.connect(sa)
+            return sock
+
+        except socket.error as _:
+            err = _
+            if sock is not None:
+                sock.close()
+
+    if err is not None:
+        raise err
+    else:
+        raise socket.error("getaddrinfo returns an empty list")
+
+
 class IPTransport(object):
     '''Implement IP transport.'''
     def __init__(self, device=None):
@@ -46,41 +75,66 @@ class IPTransport(object):
             raise NotImplementedError(
                 'IP discovery not implemented. Please provide a device.'
             )
+        self.__device = device
+        self.__implicit_session_open = Event()
+        self.__check_session_lock = Lock()
 
-        if type(device) is tuple:
-            host, port = device
+    def _shutdown(self):
+        self.__close_implicit_session()
+
+    @contextmanager
+    def __implicit_session(self):
+        '''Manage implicit sessions with responder'''
+        # There is now an implicit session
+        self.__check_session_lock.acquire()
+        if not self.__implicit_session_open.is_set():
+            try:
+                self.__open_implicit_session()
+                self.__check_session_lock.release()
+                yield
+            finally:
+                if self.__implicit_session_open.is_set():
+                    self.__close_implicit_session()
+                if self.__check_session_lock.locked():
+                    self.__check_session_lock.release()
+        else:
+            self.__check_session_lock.release()
+            yield
+
+    def __open_implicit_session(self):
+        '''Establish implicit session with responder'''
+        # Establish Command and Event connections
+        if type(self.__device) is tuple:
+            host, port = self.__device
             self.__setup_connection(host, port)
         else:
-            self.__setup_connection(device)
+            self.__setup_connection(self.__device)
 
-        # Establish Command/Data Connection.
-        # Establish Event Connection.
         self.__event_queue = Queue()
         self.__event_proc = Thread(
             name='EvtPolling',
             target=self.__poll_events
         )
         self.__event_proc.daemon = False
-        atexit.register(self._shutdown)
         self.__event_shutdown = Event()
         self.__event_proc.start()
+        self.__implicit_session_open.set()
 
-    def _shutdown(self):
-        logger.debug('Shutdown request')
+    def __close_implicit_session(self):
+        '''Terminate implicit session with responder'''
         self.__event_shutdown.set()
-        # Free USB resource on shutdown.
-
+        if not self.__implicit_session_open.is_set():
+            return
         # Only join a running thread.
         if self.__event_proc.is_alive():
             self.__event_proc.join(2)
 
         logger.debug('Close connections for {}'.format(repr(self.__dev)))
-        # TODO: Should connections be established/closed on OpenSession
-        # TODO: instead?
         self.__evtcon.shutdown(socket.SHUT_RDWR)
         self.__cmdcon.shutdown(socket.SHUT_RDWR)
         self.__evtcon.close()
         self.__cmdcon.close()
+        self.__implicit_session_open.clear()
 
     def __setup_connection(self, host=None, port=15740):
         '''Establish a PTP/IP session for a given host'''
@@ -91,9 +145,7 @@ class IPTransport(object):
         socket.setdefaulttimeout(5)
         hdrlen = self.__Header.sizeof()
         # Command Connection Establishment
-        self.__cmdcon = socket.create_connection((host, port))
-        self.__cmdcon.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        self.__cmdcon.setsockopt(socket.IPPROTO_TCP, socket.SO_KEEPALIVE, 1)
+        self.__cmdcon = create_connection((host, port))
         # Send InitCommand
         # TODO: Allow users to identify as an arbitrary initiator.
         init_cmd_req_payload = self.__InitCommand.build(
@@ -139,7 +191,7 @@ class IPTransport(object):
             raise PTPError(msg)
 
         # Event Connection Establishment
-        self.__evtcon = socket.create_connection((host, port))
+        self.__evtcon = create_connection((host, port))
         self.__evtcon.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.__evtcon.setsockopt(socket.IPPROTO_TCP, socket.SO_KEEPALIVE, 1)
 
@@ -353,64 +405,73 @@ class IPTransport(object):
 
     def __recv(self, event=False, wait=False, raw=False):
         '''Helper method for receiving packets.'''
-        ip = self.__evtcon._sock if event else self.__cmdcon._sock
         hdrlen = self.__Header.sizeof()
+        with self.__implicit_session():
+            ip = self.__evtcon._sock if event else self.__cmdcon._sock
+            data = bytes()
+            while True:
+                try:
+                    ipdata = ip.recv(hdrlen)
+                except socket.timeout:
+                    if event:
+                        return None
+                    else:
+                        ipdata = ip.recv(hdrlen)
 
-        data = bytes()
-        while True:
-            try:
-                ipdata = ip.recv(hdrlen)
-            except socket.timeout as e:
-                if event:
-                    return None
-                else:
-                    raise e
-            # Read a single entire packet
-            while len(ipdata) < hdrlen:
-                ipdata += ip.recv(hdrlen - len(ipdata))
-            header = self.__Header.parse(
-                ipdata[0:hdrlen]
-            )
-            while len(ipdata) < header.Length:
-                ipdata += ip.recv(header.Length - len(ipdata))
-            # Run sanity checks.
-            if header.Type not in [
-                    'Cancel',
-                    'Data',
-                    'Event',
-                    'Response',
-                    'StartData',
-                    'EndData',
-            ]:
-                raise PTPError(
-                    'Unexpected PTP/IP packet type {}'
-                    .format(header.Type)
+                if len(ipdata) == 0 and not event:
+                    raise PTPError('Command connection dropped')
+                # Read a single entire packet
+                while len(ipdata) < hdrlen:
+                    ipdata += ip.recv(hdrlen - len(ipdata))
+                header = self.__Header.parse(
+                    ipdata[0:hdrlen]
                 )
-            if header.Type not in ['StartData', 'Data', 'EndData']:
-                break
-            else:
-                response = self.__parse_response(ipdata)
-
-            if header.Type == 'StartData':
-                expected = response.TotalDataLength
-                current_transaction = response.TransactionID
-            elif header.Type == 'Data' and response.TransactionID == current_transaction:
-                data += response.Data
-            elif header.Type == 'EndData' and response.TransactionID == current_transaction:
-                data += response.Data
-                datalen = len(data)
-                if datalen != expected:
-                    logger.warning(
-                        '{} data than expected {}/{}'
-                        .format(
-                            'More' if datalen > expected else 'Less',
-                            datalen,
-                            expected
-                        )
+                while len(ipdata) < header.Length:
+                    ipdata += ip.recv(header.Length - len(ipdata))
+                # Run sanity checks.
+                if header.Type not in [
+                        'Cancel',
+                        'Data',
+                        'Event',
+                        'Response',
+                        'StartData',
+                        'EndData',
+                ]:
+                    raise PTPError(
+                        'Unexpected PTP/IP packet type {}'
+                        .format(header.Type)
                     )
-                response['Data'] = data
-                response['Type'] = 'Data'
-                return response
+                if header.Type not in ['StartData', 'Data', 'EndData']:
+                    break
+                else:
+                    response = self.__parse_response(ipdata)
+
+                if header.Type == 'StartData':
+                    expected = response.TotalDataLength
+                    current_transaction = response.TransactionID
+                elif (
+                        header.Type == 'Data' and
+                        response.TransactionID == current_transaction
+                ):
+                    data += response.Data
+                elif (
+                        header.Type == 'EndData' and
+                        response.TransactionID == current_transaction
+                ):
+                    data += response.Data
+                    datalen = len(data)
+                    if datalen != expected:
+                        logger.warning(
+                            '{} data than expected {}/{}'
+                            .format(
+                                'More' if datalen > expected else 'Less',
+                                datalen,
+                                expected
+                            )
+                        )
+                    response['Data'] = data
+                    response['Type'] = 'Data'
+                    return response
 
         if raw:
             # TODO: Deal with raw Data packets??
@@ -420,8 +481,8 @@ class IPTransport(object):
 
     def __send(self, ptp_container, event=False):
         '''Helper method for sending packets.'''
-        ip = self.__evtcon._sock if event else self.__cmdcon._sock
         packet = self.__Packet.build(ptp_container)
+        ip = self.__evtcon._sock if event else self.__cmdcon._sock
         while ip.sendall(packet) is not None:
             logger.debug('Failed to send {} packet'.format(ptp_container.Type))
 
@@ -459,10 +520,11 @@ class IPTransport(object):
             ' ' + str(list(map(hex, ptp_container.Parameter)))
             if ptp_container.Parameter else '',
         ))
-        self.__send_request(ptp_container)
-        self.__send_data(ptp_container, data)
-        # Get response and sneak in implicit SessionID and missing parameters.
-        return self.__recv()
+        with self.__implicit_session():
+            self.__send_request(ptp_container)
+            self.__send_data(ptp_container, data)
+            # Get response and sneak in implicit SessionID and missing parameters.
+            return self.__recv()
 
     def recv(self, ptp_container):
         '''Transfer operation with dataphase from responder to initiator.'''
@@ -471,30 +533,48 @@ class IPTransport(object):
             ' ' + str(list(map(hex, ptp_container.Parameter)))
             if ptp_container.Parameter else '',
         ))
-        self.__send_request(ptp_container)
-        dataphase = self.__recv()
-        if hasattr(dataphase, 'Data'):
-            response = self.__recv()
-            if (
-                    (ptp_container.TransactionID != dataphase.TransactionID) or
-                    (ptp_container.SessionID != dataphase.SessionID) or
-                    (dataphase.TransactionID != response.TransactionID) or
-                    (dataphase.SessionID != response.SessionID)
-            ):
-                raise PTPError(
-                    'Dataphase does not match with requested operation.'
-                )
-            response['Data'] = dataphase.Data
-            return response
-        else:
-            return dataphase
+        with self.__implicit_session():
+            self.__send_request(ptp_container)
+            dataphase = self.__recv()
+            if hasattr(dataphase, 'Data'):
+                response = self.__recv()
+                if (
+                        (ptp_container.TransactionID != dataphase.TransactionID) or
+                        (ptp_container.SessionID != dataphase.SessionID) or
+                        (dataphase.TransactionID != response.TransactionID) or
+                        (dataphase.SessionID != response.SessionID)
+                ):
+                    raise PTPError(
+                        'Dataphase does not match with requested operation.'
+                    )
+                response['Data'] = dataphase.Data
+                return response
+            else:
+                return dataphase
 
     def mesg(self, ptp_container):
         '''Transfer operation without dataphase.'''
-        self.__send_request(ptp_container)
-        # Get response and sneak in implicit SessionID and missing parameters
-        # for FullResponse.
-        return self.__recv()
+        op = ptp_container['OperationCode']
+        if op == 'OpenSession':
+            self.__open_implicit_session()
+
+        with self.__implicit_session():
+            self.__send_request(ptp_container)
+            # Get response and sneak in implicit SessionID and missing
+            # parameters for FullResponse.
+            response = self.__recv()
+
+        rc = response['ResponseCode']
+        if op == 'OpenSession':
+            if rc == 'OK':
+                atexit.register(self.__close_implicit_session)
+            else:
+                self.__close_implicit_session()
+        elif op == 'CloseSession':
+            if rc == 'OK':
+                self.__close_implicit_session()
+
+        return response
 
     def event(self, wait=False):
         '''Check event.

@@ -377,6 +377,43 @@ class PTPDevice(object):
             CADarkBright=0xD1DF,
         )
 
+    def _EOSImageFormat(self):
+        return Struct(
+            'Entries' / PrefixedArray(
+                self._UInt32,
+                Struct
+                (
+                    'Bytes' / self._UInt32,
+                    PrefixedArray(lambda ctx: ctx.Bytes / 4, Byte),
+
+                    'Type' / Enum(
+                        self._UInt32,
+                        default=Pass,
+                        JPG=1,
+                        RAW=1,
+                    ),
+                    'Size' / Enum(
+                        self._UInt32,
+                        default=Pass,
+                        L=0x00,
+                        M=0x01,
+                        S=0x02,
+                        S1=0x0E,
+                        S2=0x0f,
+                        S3=0x10,
+                    ),
+                    'Compression' / Enum(
+                        self._UInt32,
+                        default=Pass,
+                        Standard=0x02,
+                        Fine=0x03,
+                        Lossless=0x04,
+                    ),
+                )
+            ),
+        )
+
+
     def _EOSEventRecords(self):
         '''Return desired endianness for EOS Event Records constructor'''
         return Range(

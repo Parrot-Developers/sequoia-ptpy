@@ -322,7 +322,7 @@ class USBTransport(object):
                     logger.debug('Initial read smaller than a header')
                     usbdata += ep.read(
                         ep.wMaxPacketSize,
-                        timeout=100
+                        timeout=5000
                     )
             except usb.core.USBError as e:
                 # Ignore timeout or busy device once.

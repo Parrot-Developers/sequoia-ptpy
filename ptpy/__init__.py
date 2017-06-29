@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from .extensions.canon import PTPDevice as canon
 from .extensions.microsoft import PTPDevice as mtp
 from .extensions.parrot import PTPDevice as parrot
+from .extensions.nikon import PTPDevice as nikon
 from .ptp import PTPDevice, PTPError
 from .transports.usb import USBTransport as usb
 
@@ -24,6 +25,7 @@ if 'PTPY_DEBUG_LOG' in os.environ:
 class PTPyError(Exception):
     pass
 
+
 # As extensions are implemented, they should be added here, so they are
 # automatically used. The names here need to match those in ptp.py
 # VendorExtensionID.
@@ -37,7 +39,7 @@ known_extensions = {
     'Equinox': None,
     'Viewquest': None,
     'STMicroelectronics': None,
-    'Nikon': None,
+    'Nikon': nikon,
     'Canon': canon,
     'FotoNation': None,
     'PENTAX': None,
@@ -60,7 +62,8 @@ def ptpy_factory(transport, extension=None):
 
 class PTPy(object):
     '''Class for all transports, extensions and basic PTP functionality'''
-    def __new__(cls, device=None, extension=None, transport=None, knowledge=True, raw=False, **kwargs):
+    def __new__(cls, device=None, extension=None, transport=None,
+                knowledge=True, raw=False, **kwargs):
         '''Instantiate the correct class for a device automatically.'''
         # Determine transport
         if transport is None:
@@ -80,6 +83,8 @@ class PTPy(object):
                 device_info = plain_camera.get_device_info()
                 plain_camera._shutdown()
                 try:
+                    # TODO: Check vendor and product for non-compliant
+                    # cameras.
                     extension = known_extensions[device_info.VendorExtensionID]
                 except KeyError:
                     extension = None
@@ -101,5 +106,6 @@ class PTPy(object):
             instance._obtain_the_knowledge()
 
         return instance
+
 
 __all__ = (PTPy, PTPyError)

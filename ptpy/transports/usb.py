@@ -510,7 +510,10 @@ class USBTransport(object):
     def __poll_events(self):
         '''Poll events, adding them to a queue.'''
         while not self.__event_shutdown.is_set() and _main_thread_alive():
-            evt = self.__recv(event=True, wait=False, raw=True)
-            if evt is not None:
-                logger.debug('Event queued')
-                self.__event_queue.put(evt)
+            try:
+                evt = self.__recv(event=True, wait=False, raw=True)
+                if evt is not None:
+                    logger.debug('Event queued')
+                    self.__event_queue.put(evt)
+            except Exception as e:
+                logger.error(e)

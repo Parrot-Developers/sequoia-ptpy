@@ -57,7 +57,7 @@ class PTPDevice(object):
             'FlickerReduction': 0xD034,
             'RemoteMode': 0xD035,
             'VideoMode': 0xD036,
-            'EffectMode': 0xD037,
+            'NikonEffectMode': 0xD037,
             'Mode': 0xD038,
             'CSMMenuBankSelect': 0xD040,
             'MenuBankNameA': 0xD041,
@@ -107,7 +107,7 @@ class PTPDevice(object):
             'NrHighISO': 0xD070,
             'SHSetCHGUIDDisp': 0xD071,
             'ArtistName': 0xD072,
-            'CopyrightInfo': 0xD073,
+            'NikonCopyrightInfo': 0xD073,
             'FlashSyncSpeed': 0xD074,
             'FlashShutterSpeed': 0xD075,
             'E3AAFlashMode': 0xD076,
@@ -169,7 +169,7 @@ class PTPDevice(object):
             'SceneMode': 0xD0F9,
             'SceneMode2': 0xD0FD,
             'SelfTimerInterval': 0xD0FE,
-            'ExposureTime': 0xD100,
+            'NikonExposureTime': 0xD100,
             'ACPower': 0xD101,
             'WarningStatus': 0xD102,
             'MaximumShots': 0xD103,
@@ -223,10 +223,10 @@ class PTPDevice(object):
             'PADVPMode': 0xD164,
             'ImageReview': 0xD165,
             'AFAreaIllumination': 0xD166,
-            'FlashMode': 0xD167,
+            'NikonFlashMode': 0xD167,
             'FlashCommanderMode': 0xD168,
             'FlashSign': 0xD169,
-            'ISOAuto': 0xD16A,
+            '_ISOAuto': 0xD16A,
             'RemoteTimeout': 0xD16B,
             'GridDisplay': 0xD16C,
             'FlashModeManualPower': 0xD16D,
@@ -291,15 +291,15 @@ class PTPDevice(object):
             'D251': 0xD251,
             'ISO': 0xF002,
             'ImageCompression': 0xF009,
-            'ImageSize': 0xF00A,
-            'WhiteBalance': 0xF00C,
+            'NikonImageSize': 0xF00A,
+            'NikonWhiteBalance': 0xF00C,
             # TODO: Are these redundant? Or product-specific?
             '_LongExposureNoiseReduction': 0xF00D,
             'HiISONoiseReduction': 0xF00E,
             '_ActiveDLighting': 0xF00F,
             '_MovQuality': 0xF01C,
         }
-        product_properties = product_properties.update(props)
+        product_properties.update(props)
         return ptp.PTPDevice._PropertyCode(
             self,
             **product_properties

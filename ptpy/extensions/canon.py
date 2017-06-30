@@ -586,8 +586,7 @@ class PTPDevice(object):
             Parameter=[]
         )
         response = self.recv(ptp)
-        # TODO: parse EOS events automatically
-        return response
+        return self.__parse_if_data(response, self._EOSEventRecords)
 
     # TODO: implement EOSTransferComplete
     # TODO: implement EOSCancelTransfer

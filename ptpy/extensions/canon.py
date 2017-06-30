@@ -6,7 +6,7 @@ extension. This is why inheritance is not explicit.
 from .. import ptp
 from construct import (
     Array, Container, Enum, ExprAdapter, Pass, PrefixedArray, Range, Struct,
-    Switch, this, Probe, Embedded
+    Switch, this, Probe, Embedded, Byte
 )
 import logging
 logger = logging.getLogger(__name__)

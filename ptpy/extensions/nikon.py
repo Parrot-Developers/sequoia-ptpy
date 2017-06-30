@@ -388,7 +388,7 @@ class PTPDevice(object):
         return PrefixedArray(
             self._UInt16,
             Struct(
-                'EventCode' / self._UInt16,
+                'EventCode' / self._EventCode,
                 'Parameter' / self._UInt32,
             )
         )

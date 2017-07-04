@@ -15,12 +15,12 @@ from usb.util import (
     ENDPOINT_OUT, ENDPOINT_IN,
 )
 from ..ptp import PTPError
+from ..util import _main_thread_alive
 from construct import (
     Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
     Int16ul, Int32ul, Pass
 )
 from threading import Thread, Event, RLock
-from threading import enumerate as threading_enumerate
 from six.moves.queue import Queue
 from hexdump import hexdump
 
@@ -31,12 +31,6 @@ __author__ = 'Luis Mario Domenzain'
 
 
 PTP_USB_CLASS = 6
-
-
-def _main_thread_alive():
-    return any(
-        (i.name == "MainThread") and i.is_alive() for i in
-        threading_enumerate())
 
 
 class find_class(object):
@@ -119,7 +113,6 @@ class USBTransport(object):
             message = 'No USB PTP device found.'
             logger.error(message)
             raise PTPError(message)
-
 
     def __acquire_camera(self, devs):
         '''From the cameras given, get the first one that does not fail'''

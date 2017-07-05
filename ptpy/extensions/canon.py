@@ -21,8 +21,11 @@ __all__ = ('PTPDevice',)
 class PTPDevice(object):
     '''This class implements Canon's PTP operations.'''
 
-    def __canon_init__(self):
-        super(self)
+    def __eos_init_session(self):
+        self.eos_set_remote_mode(1)
+        self.eos_event_mode(1)
+
+    def __eos_event_init(self):
         self.__eos_event_proc = Thread(
             name='EOSEvtPolling',
             target=self.__eos_poll_events
@@ -30,7 +33,6 @@ class PTPDevice(object):
         self.__eos_event_proc.daemon = False
         atexit.register(self._eos_shutdown)
         self.__eos_event_proc.start()
-
         self.__eos_event_shutdown = Event()
 
     def _eos_shutdown(self):
@@ -438,7 +440,6 @@ class PTPDevice(object):
             ),
         )
 
-
     def _EOSEventRecords(self):
         '''Return desired endianness for EOS Event Records constructor'''
         return Range(
@@ -760,11 +761,12 @@ class PTPDevice(object):
     def __eos_poll_events(self):
         '''Poll events, adding them to a queue.'''
         while not self.__eos_event_shutdown.is_set() and _main_thread_alive():
-            sleep(3)
             try:
-                evt = self.__recv(event=True, wait=False, raw=True)
-                if evt is not None:
-                    logger.debug('Event queued')
-                    self.__event_queue.put(evt)
+                evts = self.eos_get_event()
+                if evts:
+                    for evt in evts:
+                        logger.debug('Event queued')
+                        self.__event_queue.put(evt)
             except Exception as e:
                 logger.error(e)
+            sleep(3)

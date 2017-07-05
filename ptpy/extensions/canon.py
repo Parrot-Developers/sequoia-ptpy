@@ -4,10 +4,12 @@ Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
 from ..util import _main_thread_alive
+from contextlib import contextmanager
 from construct import (
     Array, Byte, Container, Embedded, Enum, Pass, PrefixedArray, Range, Struct,
     Switch,
 )
+from six.moves.queue import Queue
 from threading import Thread, Event
 from time import sleep
 import atexit
@@ -21,26 +23,48 @@ class Canon(object):
     '''This class implements Canon's PTP operations.'''
     def __init__(self, *args, **kwargs):
         logger.debug('Init Canon')
+        # TODO: expose the choice to poll or not Canon events
+        self.__no_polling = False
         super(Canon, self).__init__(*args, **kwargs)
 
-    def __eos_init_session(self):
-        self.eos_set_remote_mode(1)
-        self.eos_event_mode(1)
+    @contextmanager
+    def session(self):
+        '''
+        Manage Canon session with context manager.
+        '''
+        # When raw device, do not perform
+        if self.__no_polling:
+            with super(Canon, self).session():
+                yield
+            return
+        # Within a normal PTP session
+        with super(Canon, self).session():
+            # Set up remote mode and extended event info
+            self.eos_set_remote_mode(1)
+            self.eos_event_mode(1)
+            # And launch a polling thread
+            self.__event_queue = Queue()
+            self.__eos_event_shutdown = Event()
+            self.__eos_event_proc = Thread(
+                name='EOSEvtPolling',
+                target=self.__eos_poll_events
+            )
+            self.__eos_event_proc.daemon = False
+            atexit.register(self._eos_shutdown)
+            self.__eos_event_proc.start()
 
-    def __eos_event_init(self):
-        self.__eos_event_proc = Thread(
-            name='EOSEvtPolling',
-            target=self.__eos_poll_events
-        )
-        self.__eos_event_proc.daemon = False
-        atexit.register(self._eos_shutdown)
-        self.__eos_event_proc.start()
-        self.__eos_event_shutdown = Event()
+            try:
+                yield
+            finally:
+                self._eos_shutdown()
+
+    def _shutdown(self):
+        self._eos_shutdown()
+        super(Canon, self)._shutdown()
 
     def _eos_shutdown(self):
         logger.debug('Shutdown EOS events request')
         self.__eos_event_shutdown.set()
-        # Free USB resource on shutdown.
 
         # Only join a running thread.
         if self.__eos_event_proc.is_alive():

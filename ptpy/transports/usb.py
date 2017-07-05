@@ -97,6 +97,10 @@ class USBTransport(object):
         self.__inep_lock = RLock()
         self.__intep_lock = RLock()
         self.__outep_lock = RLock()
+        # Slightly redundant transaction lock to avoid catching other request's
+        # response
+        self.__transaction_lock = RLock()
+
         self.__event_proc = Thread(
             name='EvtPolling',
             target=self.__poll_events
@@ -421,10 +425,12 @@ class USBTransport(object):
             ' ' + str(list(map(hex, ptp_container.Parameter)))
             if ptp_container.Parameter else '',
         ))
-        self.__send_request(ptp_container)
-        self.__send_data(ptp_container, data)
-        # Get response and sneak in implicit SessionID and missing parameters.
-        response = self.__recv()
+        with self.__transaction_lock:
+            self.__send_request(ptp_container)
+            self.__send_data(ptp_container, data)
+            # Get response and sneak in implicit SessionID and missing
+            # parameters.
+            response = self.__recv()
         logger.debug('SEND {} {} bytes {}{}'.format(
             ptp_container.OperationCode,
             datalen,
@@ -441,23 +447,24 @@ class USBTransport(object):
             ' ' + str(list(map(hex, ptp_container.Parameter)))
             if ptp_container.Parameter else '',
         ))
-        self.__send_request(ptp_container)
-        dataphase = self.__recv()
-        if hasattr(dataphase, 'Data'):
-            response = self.__recv()
-            if (
-                    (ptp_container.OperationCode != dataphase.OperationCode) or
-                    (ptp_container.TransactionID != dataphase.TransactionID) or
-                    (ptp_container.SessionID != dataphase.SessionID) or
-                    (dataphase.TransactionID != response.TransactionID) or
-                    (dataphase.SessionID != response.SessionID)
-            ):
-                raise PTPError(
-                    'Dataphase does not match with requested operation.'
-                )
-            response['Data'] = dataphase.Data
-        else:
-            response = dataphase
+        with self.__transaction_lock:
+            self.__send_request(ptp_container)
+            dataphase = self.__recv()
+            if hasattr(dataphase, 'Data'):
+                response = self.__recv()
+                if (
+                        (ptp_container.OperationCode != dataphase.OperationCode) or
+                        (ptp_container.TransactionID != dataphase.TransactionID) or
+                        (ptp_container.SessionID != dataphase.SessionID) or
+                        (dataphase.TransactionID != response.TransactionID) or
+                        (dataphase.SessionID != response.SessionID)
+                ):
+                    raise PTPError(
+                        'Dataphase does not match with requested operation.'
+                    )
+                response['Data'] = dataphase.Data
+            else:
+                response = dataphase
 
         logger.debug('RECV {} {}{}{}'.format(
             ptp_container.OperationCode,
@@ -476,10 +483,11 @@ class USBTransport(object):
             ' ' + str(list(map(hex, ptp_container.Parameter)))
             if ptp_container.Parameter else '',
         ))
-        self.__send_request(ptp_container)
-        # Get response and sneak in implicit SessionID and missing parameters
-        # for FullResponse.
-        response = self.__recv()
+        with self.__transaction_lock:
+            self.__send_request(ptp_container)
+            # Get response and sneak in implicit SessionID and missing
+            # parameters for FullResponse.
+            response = self.__recv()
         logger.debug('MESG {} {}{}'.format(
             ptp_container.OperationCode,
             response.ResponseCode,

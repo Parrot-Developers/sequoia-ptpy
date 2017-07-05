@@ -9,11 +9,11 @@ and may need to be adapted to transport-endianness by calling
 `'native'`.
 '''
 from construct import (
-    Array, BitsInteger, Container, Embedded, Enum, ExprAdapter,
-    Prefixed, Pass, PrefixedArray, Int16sb, Int32sb, Int64sb,
-    Int8sb, Sequence, Int16sl, Int32sl, Int64sl, Int8sl, Int16sn, Int32sn,
-    Int64sn, Int8sn, Struct, Switch, Int16ub, Int32ub, Int64ub, Int8ub,
-    Int16ul, Int32ul, Int64ul, Int8ul, Int16un, Int32un, Int64un, Int8un, Computed,
+    Array, BitsInteger, Computed, Container, Embedded, Enum, ExprAdapter,
+    Int16sb, Int16sl, Int16sn, Int16ub, Int16ul, Int16un, Int32sb, Int32sl,
+    Int32sn, Int32ub, Int32ul, Int32un, Int64sb, Int64sl, Int64sn, Int64ub,
+    Int64ul, Int64un, Int8sb, Int8sl, Int8sn, Int8ub, Int8ul, Int8un, Pass,
+    PrefixedArray, Sequence, Struct, Switch,
     )
 from contextlib import contextmanager
 from dateutil.parser import parse as iso8601
@@ -39,6 +39,7 @@ class PTPError(Exception):
 class PTPUnimplemented(PTPError):
     '''Exception to indicate missing implementation.'''
     pass
+
 
 class PTPDevice(object):
     '''Implement bare PTP Device. Vendor specific devices should extend it.'''
@@ -487,7 +488,6 @@ class PTPDevice(object):
                 except AttributeError:
                     ctx = ctx._
 
-
         return Switch(
             DataTypeCode,
             datatypes,
@@ -523,7 +523,7 @@ class PTPDevice(object):
 
     def _Form(self, element):
         return Switch(
-            lambda x : x.FormFlag,
+            lambda x: x.FormFlag,
             {
                 'Range': 'Range' / self._RangeForm(element),
                 'Enumeration': 'Enumeration' / self._EnumerationForm(element),

@@ -1,19 +1,23 @@
-'''This module extends PTPDevice for Microsoft/MTP devices.
+'''This module extends PTP for Microsoft/MTP devices.
 
 Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
-from .. import ptp
+import logging
+logger = logging.getLogger(__name__)
 
-__all__ = ('PTPDevice',)
+__all__ = ('Microsoft',)
 
 
-class PTPDevice(object):
+class Microsoft(object):
     '''This class implements Canon's PTP operations.'''
 
+    def __init__(self, *args, **kwargs):
+        logger.debug('Init Microsoft')
+        super(Microsoft, self).__init__(*args, **kwargs)
+
     def _PropertyCode(self, **product_properties):
-        return ptp.PTPDevice._PropertyCode(
-            self,
+        return super(Microsoft, self)._PropertyCode(
             SynchronizationPartner=0xD401,
             DeviceFriendlyName=0xD402,
             Volume=0xD403,
@@ -28,8 +32,7 @@ class PTPDevice(object):
         )
 
     def _OperationCode(self, **product_operations):
-        return ptp.PTPDevice._OperationCode(
-            self,
+        return super(Microsoft, self)._OperationCode(
             GetObjectPropsSupported=0x9801,
             GetObjectPropDesc=0x9802,
             GetObjectPropValue=0x9803,
@@ -81,8 +84,7 @@ class PTPDevice(object):
         )
 
     def _ResponseCode(self, **product_responses):
-        return ptp.PTPDevice._ResponseCode(
-            self,
+        return super(Microsoft, self)._ResponseCode(
             MicrosoftUndefined=0xA800,
             Invalid_ObjectPropCode=0xA801,
             Invalid_ObjectProp_Format=0xA802,
@@ -104,8 +106,7 @@ class PTPDevice(object):
         )
 
     def _EventCode(self, **product_events):
-        return ptp.PTPDevice._EventCode(
-            self,
+        return super(Microsoft, self)._EventCode(
             ObjectPropChanged=0xC801,
             ObjectPropDescChanged=0xC802,
             ObjectReferencesChanged=0xC803,
@@ -113,15 +114,13 @@ class PTPDevice(object):
         )
 
     def _FilesystemType(self, **product_filesystem_types):
-        return ptp.PTPDevice._FilesystemType(
-            self,
+        return super(Microsoft, self)._FilesystemType(
             **product_filesystem_types
         )
 
     def _ObjectFormatCode(self, **product_object_formats):
         '''Return desired endianness for known ObjectFormatCode'''
-        return ptp.PTPDevice._ObjectFormatCode(
-            self,
+        return super(Microsoft, self)._ObjectFormatCode(
             MediaCard=0xb211,
             MediaCardGroup=0xb212,
             Encounter=0xb213,

@@ -3,11 +3,10 @@
 Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
-from .. import ptp
 from ..util import _main_thread_alive
 from construct import (
-    Array, Container, Enum, ExprAdapter, Pass, PrefixedArray, Range, Struct,
-    Switch, this, Probe, Embedded, Byte
+    Array, Byte, Container, Embedded, Enum, Pass, PrefixedArray, Range, Struct,
+    Switch,
 )
 from threading import Thread, Event
 from time import sleep
@@ -15,11 +14,14 @@ import atexit
 import logging
 logger = logging.getLogger(__name__)
 
-__all__ = ('PTPDevice',)
+__all__ = ('Canon',)
 
 
-class PTPDevice(object):
+class Canon(object):
     '''This class implements Canon's PTP operations.'''
+    def __init__(self, *args, **kwargs):
+        logger.debug('Init Canon')
+        super(Canon, self).__init__(*args, **kwargs)
 
     def __eos_init_session(self):
         self.eos_set_remote_mode(1)
@@ -45,8 +47,7 @@ class PTPDevice(object):
             self.__eos_event_proc.join(2)
 
     def _PropertyCode(self, **product_properties):
-        return ptp.PTPDevice._PropertyCode(
-            self,
+        return super(Canon, self)._PropertyCode(
             BeepMode=0xD001,
             ViewfinderMode=0xD003,
             ImageQuality=0xD006,
@@ -75,8 +76,7 @@ class PTPDevice(object):
         )
 
     def _OperationCode(self, **product_operations):
-        return ptp.PTPDevice._OperationCode(
-            self,
+        return super(Canon, self)._OperationCode(
             GetObjectSize=0x9001,
             SetObjectArchive=0x9002,
             KeepDeviceOn=0x9003,
@@ -183,14 +183,12 @@ class PTPDevice(object):
         )
 
     def _ResponseCode(self, **product_responses):
-        return ptp.PTPDevice._ResponseCode(
-            self,
+        return super(Canon, self)._ResponseCode(
             **product_responses
         )
 
     def _EventCode(self, **product_events):
-        return ptp.PTPDevice._EventCode(
-            self,
+        return super(Canon, self)._EventCode(
             CanonDeviceInfoChanged=0xC008,
             CanonRequestObjectTransfer=0xC009,
             CameraModeChanged=0xC00C,
@@ -198,8 +196,7 @@ class PTPDevice(object):
         )
 
     def _FilesystemType(self, **product_filesystem_types):
-        return ptp.PTPDevice._FilesystemType(
-            self,
+        return super(Canon, self)._FilesystemType(
             **product_filesystem_types
         )
 
@@ -488,7 +485,8 @@ class PTPDevice(object):
 
     # TODO: Decode Canon specific events and properties.
     def _set_endian(self, endian):
-        ptp.PTPDevice._set_endian(self, endian)
+        logger.debug('Set Canon endianness')
+        super(Canon, self)._set_endian(endian)
         self._EOSPropertyCode = self._EOSPropertyCode()
         self._EOSEventCode = self._EOSEventCode()
         self._EOSEventRecord = self._EOSEventRecord()
@@ -563,8 +561,8 @@ class PTPDevice(object):
         '''Release shutter remotely on EOS cameras'''
         ptp = Container(
             OperationCode='EOSRemoteRelease',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.mesg(ptp)
@@ -580,8 +578,8 @@ class PTPDevice(object):
         code = mode
         ptp = Container(
             OperationCode='EOSSetRemoteMode',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[code]
         )
         response = self.mesg(ptp)
@@ -596,8 +594,8 @@ class PTPDevice(object):
         code = mode
         ptp = Container(
             OperationCode='EOSSetEventMode',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[code]
         )
         response = self.mesg(ptp)
@@ -607,12 +605,12 @@ class PTPDevice(object):
         '''Poll EOS camera for EOS events'''
         ptp = Container(
             OperationCode='EOSGetEvent',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._EOSEventRecords)
+        return self._parse_if_data(response, self._EOSEventRecords)
 
     # TODO: implement EOSTransferComplete
     # TODO: implement EOSCancelTransfer
@@ -623,8 +621,8 @@ class PTPDevice(object):
         # TODO: Figure out what to send exactly.
         ptp = Container(
             OperationCode='EOSPCHDDCapacity',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[todo0, todo1, todo2]
         )
         response = self.mesg(ptp)
@@ -634,8 +632,8 @@ class PTPDevice(object):
         '''Lock user interface on EOS cameras'''
         ptp = Container(
             OperationCode='EOSSetUILock',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.mesg(ptp)
@@ -645,8 +643,8 @@ class PTPDevice(object):
         '''Unlock user interface on EOS cameras'''
         ptp = Container(
             OperationCode='EOSResetUILock',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.mesg(ptp)
@@ -666,8 +664,8 @@ class PTPDevice(object):
         '''Begin bulb capture on EOS cameras'''
         ptp = Container(
             OperationCode='EOSBulbStart',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.mesg(ptp)
@@ -677,8 +675,8 @@ class PTPDevice(object):
         '''End bulb capture on EOS cameras'''
         ptp = Container(
             OperationCode='EOSBulbEnd',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.mesg(ptp)
@@ -695,8 +693,8 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='EOSRemoteReleaseOn',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[0x2 if full else 0x1]
         )
         response = self.mesg(ptp)
@@ -711,8 +709,8 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='EOSRemoteReleaseOff',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[0x2 if full else 0x1]
         )
         response = self.mesg(ptp)
@@ -742,8 +740,8 @@ class PTPDevice(object):
 
         ptp = Container(
             OperationCode='EOSDriveLens',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[instruction]
         )
         response = self.mesg(ptp)

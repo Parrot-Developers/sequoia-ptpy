@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Module specific
 # _______________
-__all__ = ('PTPError', 'PTPUnimplemented', 'PTPDevice',)
+__all__ = ('PTPError', 'PTPUnimplemented', 'PTP',)
 __author__ = 'Luis Mario Domenzain'
 
 
@@ -41,8 +41,8 @@ class PTPUnimplemented(PTPError):
     pass
 
 
-class PTPDevice(object):
-    '''Implement bare PTP Device. Vendor specific devices should extend it.'''
+class PTP(object):
+    '''Implement bare PTP device. Vendor specific devices should extend it.'''
     # Base PTP protocol transaction elements
     # --------------------------------------
     _UInt8 = Int8un
@@ -626,6 +626,7 @@ class PTPDevice(object):
         # endianness. But only those that don't depend on endian-generic
         # constructors need to be explicitly instantiated to a given
         # endianness.
+        logger.debug('Set PTP endianness')
         if endian == 'little':
             self._UInt8 = Int8ul
             self._UInt16 = Int16ul
@@ -700,14 +701,18 @@ class PTPDevice(object):
         self._ProtectionStatus = self._ProtectionStatus()
         self._ObjectInfo = self._ObjectInfo()
 
-    # Session and transaction helpers
-    # -------------------------------
-    __session = 0
-    __session_open = False
-    __transaction_id = 1
+    def __init__(self, *args, **kwargs):
+        logger.debug('Init PTP')
+        # Session and transaction helpers
+        # -------------------------------
+        self._session = 0
+        self.__session_open = False
+        self.__transaction_id = 1
+        self.__has_the_knowledge = False
+        super(PTP, self).__init__(*args, **kwargs)
 
     @property
-    def __transaction(self):
+    def _transaction(self):
         '''Give magical property for the latest TransactionID'''
         current_id = 0
         if self.__session_open:
@@ -717,8 +722,8 @@ class PTPDevice(object):
                 self.__transaction_id = 1
         return current_id
 
-    @__transaction.setter
-    def __transaction(self, value):
+    @_transaction.setter
+    def _transaction(self, value):
         '''Manage reset of TransactionID'''
         if value != 1:
             raise PTPError(
@@ -730,7 +735,7 @@ class PTPDevice(object):
     @property
     def session_id(self):
         '''Expose internat SessionID'''
-        return self.__session
+        return self._session
 
     @session_id.setter
     def session_id(self, value):
@@ -780,44 +785,45 @@ class PTPDevice(object):
 
     # Transport-specific functions
     # ----------------------------
-    def __init__(self):
-        raise PTPUnimplemented(
-            'Please implement PTP device setup for this transport.'
-        )
-
     def send(self, ptp_container, payload):
         '''Operation with dataphase from initiator to responder'''
-        raise PTPUnimplemented(
-            'Please implement a PTP dataphase send for this transport.'
-        )
+        try:
+            return super(PTP, self).send(ptp_container, payload)
+        except Exception as e:
+            logger.error(e)
+            raise e
 
     def recv(self, ptp_container):
         '''Operation with dataphase from responder to initiator'''
-        raise PTPUnimplemented(
-            'Please implement PTP dataphase receive for this transport.'
-        )
+        try:
+            return super(PTP, self).recv(ptp_container)
+        except Exception as e:
+            logger.error(e)
+            raise e
 
     def mesg(self, ptp_container):
         '''Operation with no dataphase'''
-        raise PTPUnimplemented(
-            'Please implement PTP no-dataphase command for this transport.'
-        )
+        try:
+            return super(PTP, self).mesg(ptp_container)
+        except Exception as e:
+            logger.error(e)
+            raise e
 
     def event(self, wait=False):
-        raise PTPUnimplemented(
-            'Please implement a PTP event for this transport.'
-        )
+        try:
+            return super(PTP, self).event(wait=wait)
+        except Exception as e:
+            logger.error(e)
+            raise e
 
     # Operation-specific methods and helpers
     # --------------------------------------
-    __has_the_knowledge = False
-
-    def __parse_if_data(self, response, constructor):
+    def _parse_if_data(self, response, constructor):
         '''If the response contains data, parse it with constructor.'''
         return (constructor.parse(response.Data)
                 if hasattr(response, 'Data') else None)
 
-    def __build_if_not_data(self, data, constructor):
+    def _build_if_not_data(self, data, constructor):
         '''If the data is not binary, build it with constructor.'''
         return (constructor.build(data)
                 if isinstance(data, Container) else data)
@@ -861,7 +867,7 @@ class PTPDevice(object):
         self.__has_the_knowledge = True
 
     def open_session(self):
-        self.__session += 1
+        self._session += 1
         self.__transaction = 1
         ptp = Container(
             OperationCode='OpenSession',
@@ -869,7 +875,7 @@ class PTPDevice(object):
             # SessionID, because no session is open yet.
             SessionID=0,
             TransactionID=0,
-            Parameter=[self.__session]
+            Parameter=[self._session]
         )
         response = self.mesg(ptp)
         if response.ResponseCode == 'OK':
@@ -879,7 +885,7 @@ class PTPDevice(object):
     def close_session(self):
         ptp = Container(
             OperationCode='CloseSession',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[]
         )
@@ -891,7 +897,7 @@ class PTPDevice(object):
     def reset_device(self):
         ptp = Container(
             OperationCode='ResetDevice',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[],
         )
@@ -903,7 +909,7 @@ class PTPDevice(object):
     def power_down(self):
         ptp = Container(
             OperationCode='PowerDown',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[],
         )
@@ -928,7 +934,7 @@ class PTPDevice(object):
 
         ptp = Container(
             OperationCode='ResetDevicePropValue',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[0xffffffff if reset_all else code],
         )
@@ -938,34 +944,34 @@ class PTPDevice(object):
     def get_device_info(self):
         ptp = Container(
             OperationCode='GetDeviceInfo',
-            SessionID=self.__session,
+            SessionID=self._session,
             # GetrDeviceInfo can happen outside a session. But if there is one
             # running just use that one.
             TransactionID=(self.__transaction if self.__session_open else 0),
             Parameter=[]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._DeviceInfo)
+        return self._parse_if_data(response, self._DeviceInfo)
 
     def get_storage_ids(self):
         ptp = Container(
             OperationCode='GetStorageIDs',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._StorageIDs)
+        return self._parse_if_data(response, self._StorageIDs)
 
     def get_storage_info(self, storage_id):
         ptp = Container(
             OperationCode='GetStorageInfo',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[storage_id]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._StorageInfo)
+        return self._parse_if_data(response, self._StorageInfo)
 
     def get_num_objects(
             self,
@@ -984,7 +990,7 @@ class PTPDevice(object):
         code = self.__code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='GetNumObjects',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[
                 0xffffffff if all_storage_ids else storage_id,
@@ -1012,7 +1018,7 @@ class PTPDevice(object):
         code = self.__code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='GetObjectHandles',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[
                 0xffffffff if all_storage_ids else storage_id,
@@ -1021,7 +1027,7 @@ class PTPDevice(object):
             ]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(
+        return self._parse_if_data(
             response,
             self._PTPArray(self._ObjectHandle)
         )
@@ -1045,12 +1051,12 @@ class PTPDevice(object):
 
         ptp = Container(
             OperationCode='GetDevicePropDesc',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[code]
         )
         response = self.recv(ptp)
-        result = self.__parse_if_data(response, self._DevicePropDesc)
+        result = self._parse_if_data(response, self._DevicePropDesc)
         # Update the knowledge on response.
         if self.__has_the_knowledge and hasattr(response, 'Data'):
             device_property = self.__name(device_property, self._PropertyCode)
@@ -1069,7 +1075,7 @@ class PTPDevice(object):
 
         ptp = Container(
             OperationCode='GetDevicePropValue',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[code],
         )
@@ -1098,7 +1104,7 @@ class PTPDevice(object):
 
         ptp = Container(
             OperationCode='SetDevicePropValue',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[code],
         )
@@ -1110,7 +1116,7 @@ class PTPDevice(object):
         code = self.__code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='InitiateCapture',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[
                 storage_id,
@@ -1125,7 +1131,7 @@ class PTPDevice(object):
         code = self.__code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='InitiateOpenCapture',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[
                 storage_id,
@@ -1139,7 +1145,7 @@ class PTPDevice(object):
         '''Terminate the open capture initiated in `transaction_id`'''
         ptp = Container(
             OperationCode='TerminateOpenCapture',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[
                 transaction_id,
@@ -1152,12 +1158,12 @@ class PTPDevice(object):
         '''Get ObjectInfo dataset for given handle.'''
         ptp = Container(
             OperationCode='GetObjectInfo',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[handle]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._ObjectInfo)
+        return self._parse_if_data(response, self._ObjectInfo)
 
     def send_object(self, bytes_data):
         '''Send object to responder.
@@ -1167,7 +1173,7 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='SendObject',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[]
         )
@@ -1184,7 +1190,7 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='GetObject',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[handle]
         )
@@ -1202,7 +1208,7 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='GetPartialObject',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[handle,
                        offset,
@@ -1229,7 +1235,7 @@ class PTPDevice(object):
 
         ptp = Container(
             OperationCode='DeleteObject',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[
                 0xFFFFFFFF if delete_all else handle,
@@ -1252,7 +1258,7 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='MoveObject',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[
                 handle,
@@ -1276,7 +1282,7 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='CopyObject',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[
                 handle,
@@ -1292,7 +1298,7 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='GetThumb',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[handle]
         )
@@ -1309,7 +1315,7 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='GetResizedImageObject',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[handle, width, height]
         )
@@ -1320,12 +1326,12 @@ class PTPDevice(object):
         '''
         ptp = Container(
             OperationCode='GetVendorExtensionMaps',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(
+        return self._parse_if_data(
             response,
             self._VendorExtensionMapArray)
 
@@ -1335,12 +1341,12 @@ class PTPDevice(object):
         code = self.__code(extension, self._VendorExtensionID)
         ptp = Container(
             OperationCode='GetVendorDeviceInfo',
-            SessionID=self.__session,
+            SessionID=self._session,
             TransactionID=self.__transaction,
             Parameter=[code]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(
+        return self._parse_if_data(
             response,
             self._DeviceInfo)
 

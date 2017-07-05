@@ -1,22 +1,26 @@
-'''This module extends PTPDevice for Parrot devices.
+'''This module extends PTP for Parrot devices.
 
 Use it in a master module that determines the vendor and automatically uses its
 extension.
 '''
-from .. import ptp
 from construct import (
-    Struct, BitStruct, Container, Enum, ExprAdapter, Flag, Padding, Pass
+    Container, Enum, ExprAdapter, Pass, Struct,
 )
+import logging
+logger = logging.getLogger(__name__)
 
-__all__ = ('PTPDevice',)
+__all__ = ('Parrot',)
 
 
-class PTPDevice(object):
+class Parrot(object):
     '''This class implements Parrot's PTP operations.'''
 
+    def __init__(self, *args, **kwargs):
+        logger.debug('Init Parrot')
+        super(Parrot, self).__init__(*args, **kwargs)
+
     def _PropertyCode(self, **product_properties):
-        return ptp.PTPDevice._PropertyCode(
-            self,
+        return super(Parrot, self)._PropertyCode(
             PhotoSensorEnableMask=0xD201,
             PhotoSensorsKeepOn=0xD202,
             MultispectralImageSize=0xD203,
@@ -49,8 +53,7 @@ class PTPDevice(object):
         )
 
     def _OperationCode(self, **product_operations):
-        return ptp.PTPDevice._OperationCode(
-            self,
+        return super(Parrot, self)._OperationCode(
             GetSunshineValues=0x9201,
             GetTemperatureValues=0x9202,
             GetAngleValues=0x9203,
@@ -70,22 +73,19 @@ class PTPDevice(object):
         )
 
     def _ResponseCode(self, **product_responses):
-        return ptp.PTPDevice._ResponseCode(
-            self,
+        return super(Parrot, self)._ResponseCode(
             **product_responses
         )
 
     def _EventCode(self, **product_events):
-        return ptp.PTPDevice._EventCode(
-            self,
+        return super(Parrot, self)._EventCode(
             Status=0xC201,
             MagnetoCalibrationStatus=0xC202,
             **product_events
         )
 
     def _FilesystemType(self, **product_filesystem_types):
-        return ptp.PTPDevice._FilesystemType(
-            self,
+        return super(Parrot, self)._FilesystemType(
             **product_filesystem_types
         )
 
@@ -313,7 +313,8 @@ class PTPDevice(object):
         )
 
     def _set_endian(self, endian):
-        ptp.PTPDevice._set_endian(self, endian)
+        logger.debug('Set Parrot endianness')
+        super(Parrot, self)._set_endian(endian)
         self._Sunshine = self._Sunshine()
         self._Temperature = self._Temperature()
         self._Angle = self._Angle()
@@ -330,98 +331,98 @@ class PTPDevice(object):
     def get_sunshine_values(self):
         ptp = Container(
             OperationCode='GetSunshineValues',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._Sunshine)
+        return self._parse_if_data(response, self._Sunshine)
 
     def get_temperature_values(self):
         ptp = Container(
             OperationCode='GetTemperatureValues',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._Temperature)
+        return self._parse_if_data(response, self._Temperature)
 
     def get_angle_values(self, imu_id=0):
         ptp = Container(
             OperationCode='GetAngleValues',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[imu_id]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._Angle)
+        return self._parse_if_data(response, self._Angle)
 
     def get_gps_values(self):
         ptp = Container(
             OperationCode='GetGpsValues',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._GPS)
+        return self._parse_if_data(response, self._GPS)
 
     def get_gyroscope_values(self, imu_id=0):
         ptp = Container(
             OperationCode='GetGyroscopeValues',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[imu_id]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._Gyroscope)
+        return self._parse_if_data(response, self._Gyroscope)
 
     def get_accelerometer_values(self, imu_id=0):
         ptp = Container(
             OperationCode='GetAccelerometerValues',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[imu_id]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._Accelerometer)
+        return self._parse_if_data(response, self._Accelerometer)
 
     def get_magnetometer_values(self, imu_id=0):
         ptp = Container(
             OperationCode='GetMagnetometerValues',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[imu_id]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._Magnetometer)
+        return self._parse_if_data(response, self._Magnetometer)
 
     def get_imu_values(self, imu_id=0):
         ptp = Container(
             OperationCode='GetImuValues',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[imu_id]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._IMU)
+        return self._parse_if_data(response, self._IMU)
 
     def get_status_mask(self, imu_id=0):
         ptp = Container(
             OperationCode='GetStatusMask',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[imu_id]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._Status)
+        return self._parse_if_data(response, self._Status)
 
     def eject_storage(self, storage_id):
         ptp = Container(
             OperationCode='EjectStorage',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[storage_id]
         )
         return self.mesg(ptp)
@@ -429,8 +430,8 @@ class PTPDevice(object):
     def start_magneto_calib(self, imu_id=0):
         ptp = Container(
             OperationCode='StartMagnetoCalib',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[imu_id]
         )
         return self.mesg(ptp)
@@ -438,8 +439,8 @@ class PTPDevice(object):
     def stop_magneto_calib(self, imu_id=0):
         ptp = Container(
             OperationCode='StopMagnetoCalib',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[imu_id]
         )
         return self.mesg(ptp)
@@ -447,29 +448,29 @@ class PTPDevice(object):
     def get_magneto_calib_status(self, imu_id=0):
         ptp = Container(
             OperationCode='MagnetoCalibStatus',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[imu_id]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._MagnetoStatus)
+        return self._parse_if_data(response, self._MagnetoStatus)
 
     def send_firmware(self, firmware):
         '''Send PLF for update'''
         ptp = Container(
             OperationCode='SendFirmwareUpdate',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[len(firmware)]
         )
         return self.send(ptp, firmware)
 
     def set_geotag(self, geotag):
-        geotag = self.__build_if_not_data(geotag, self._Geotag)
+        geotag = self._build_if_not_data(geotag, self._Geotag)
         ptp = Container(
             OperationCode='SetGeotag',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         return self.send(ptp, geotag)

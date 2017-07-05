@@ -1,20 +1,22 @@
-'''This module extends PTPDevice for Nikon devices.
+'''This module extends PTP for Nikon devices.
 Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
-from .. import ptp
 from construct import (
-    Array, Container, Enum, ExprAdapter, Pass, PrefixedArray, Range, Struct,
-    Switch, this, Probe, Embedded
+    Container, PrefixedArray, Struct,
 )
 import logging
 logger = logging.getLogger(__name__)
 
-__all__ = ('PTPDevice',)
+__all__ = ('Nikon',)
 
 
-class PTPDevice(object):
+class Nikon(object):
     '''This class implements Nikon's PTP operations.'''
+
+    def __init__(self, *args, **kwargs):
+        logger.debug('Init Nikon')
+        super(Nikon, self).__init__(*args, **kwargs)
 
     def _PropertyCode(self, **product_properties):
         props = {
@@ -300,14 +302,12 @@ class PTPDevice(object):
             '_MovQuality': 0xF01C,
         }
         product_properties.update(props)
-        return ptp.PTPDevice._PropertyCode(
-            self,
+        return super(Nikon, self)._PropertyCode(
             **product_properties
         )
 
     def _OperationCode(self, **product_operations):
-        return ptp.PTPDevice._OperationCode(
-            self,
+        return super(Nikon, self)._OperationCode(
             GetProfileAllData=0x9006,
             SendProfileData=0x9007,
             DeleteProfile=0x9008,
@@ -349,8 +349,7 @@ class PTPDevice(object):
         )
 
     def _ResponseCode(self, **product_responses):
-        return ptp.PTPDevice._ResponseCode(
-            self,
+        return super(Nikon, self)._ResponseCode(
             HardwareError=0xA001,
             OutOfFocus=0xA002,
             ChangeCameraModeFailed=0xA003,
@@ -369,8 +368,7 @@ class PTPDevice(object):
         )
 
     def _EventCode(self, **product_events):
-        return ptp.PTPDevice._EventCode(
-            self,
+        return super(Nikon, self)._EventCode(
             ObjectAddedInSDRAM=0xC101,
             CaptureCompleteRecInSdram=0xC102,
             AdvancedTransfer=0xC103,
@@ -379,8 +377,7 @@ class PTPDevice(object):
         )
 
     def _FilesystemType(self, **product_filesystem_types):
-        return ptp.PTPDevice._FilesystemType(
-            self,
+        return super(Nikon, self)._FilesystemType(
             **product_filesystem_types
         )
 
@@ -394,7 +391,8 @@ class PTPDevice(object):
         )
 
     def _set_endian(self, endian):
-        ptp.PTPDevice._set_endian(self, endian)
+        logger.debug('Set Nikon endianness')
+        super(Nikon, self)._set_endian(endian)
         self._NikonEvent = self._NikonEvent()
 
     # TODO: Add event queue over all transports and extensions.
@@ -402,20 +400,20 @@ class PTPDevice(object):
         '''Check Nikon specific event'''
         ptp = Container(
             OperationCode='CheckEvents',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.recv(ptp)
-        return self.__parse_if_data(response, self._NikonEvent)
+        return self._parse_if_data(response, self._NikonEvent)
 
     # TODO: Provide a single camera agnostic command that will trigger a camera
     def capture(self):
         '''Nikon specific capture'''
         ptp = Container(
             OperationCode='Capture',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         return self.mesg(ptp)
@@ -424,8 +422,8 @@ class PTPDevice(object):
         '''Nikon specific autofocus and capture to SDRAM'''
         ptp = Container(
             OperationCode='AFCaptureSDRAM',
-            SessionID=self.__session,
-            TransactionID=self.__transaction,
+            SessionID=self._session,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         return self.mesg(ptp)

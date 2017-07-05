@@ -17,8 +17,8 @@ from usb.util import (
 from ..ptp import PTPError
 from ..util import _main_thread_alive
 from construct import (
-    Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
-    Int16ul, Int32ul, Pass
+    Bytes, Container, Embedded, Enum, ExprAdapter, Int16ul, Int32ul, Pass,
+    Range, Struct,
 )
 from threading import Thread, Event, RLock
 from six.moves.queue import Queue
@@ -66,7 +66,8 @@ def find_usb_cameras(name=None):
 
 class USBTransport(object):
     '''Implement USB transport.'''
-    def __init__(self, device=None):
+    def __init__(self, *args, **kwargs):
+        device = kwargs.get('device', None)
         '''Instantiate the first available PTP device over USB'''
         logger.debug('Init USB')
         self.__setup_constructors()
@@ -119,9 +120,11 @@ class USBTransport(object):
 
         for _ in self.__available_cameras(devs):
             try:
-                if self.__dev.is_kernel_driver_active(self.__intf.bInterfaceNumber):
+                if self.__dev.is_kernel_driver_active(
+                        self.__intf.bInterfaceNumber):
                     try:
-                        self.__dev.detach_kernel_driver(self.__intf.bInterfaceNumber)
+                        self.__dev.detach_kernel_driver(
+                            self.__intf.bInterfaceNumber)
                         usb.util.claim_interface(self.__dev, self.__intf)
                     except usb.core.USBError:
                         message = (

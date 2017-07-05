@@ -1,10 +1,11 @@
 '''Master module that instantiates the correct extension and transport.'''
 from __future__ import absolute_import
-from .extensions.canon import PTPDevice as canon
-from .extensions.microsoft import PTPDevice as mtp
-from .extensions.parrot import PTPDevice as parrot
-from .extensions.nikon import PTPDevice as nikon
-from .ptp import PTPDevice, PTPError
+from .extensions.canon import Canon
+from .extensions.microsoft import Microsoft
+from .extensions.parrot import Parrot
+from .extensions.nikon import Nikon
+from .ptp import PTPError
+from .ptp import PTP
 from .transports.usb import USBTransport as usb
 
 import os
@@ -35,18 +36,18 @@ known_extensions = {
     'Agilent': None,
     'Polaroid': None,
     'AgfaGevaert': None,
-    'Microsoft': mtp,
+    'Microsoft': Microsoft,
     'Equinox': None,
     'Viewquest': None,
     'STMicroelectronics': None,
-    'Nikon': nikon,
-    'Canon': canon,
+    'Nikon': Nikon,
+    'Canon': Canon,
     'FotoNation': None,
     'PENTAX': None,
     'Fuji': None,
     'Sony': None,
     'Samsung': None,
-    'Parrot': parrot,
+    'Parrot': Parrot,
 }
 
 
@@ -54,9 +55,9 @@ def ptpy_factory(transport, extension=None):
     # The order needs to be Transport inherits Extension inherits Base. This is
     # so that the extension can extend the base and the transport can
     # instantiate the correct endianness.
-    inheritance = ((transport, extension, PTPDevice, object)
+    inheritance = ((extension, PTP, transport)
                    if extension is not None
-                   else (transport, PTPDevice, object))
+                   else (PTP, transport))
     return type('PTPy', inheritance, {})
 
 
@@ -66,8 +67,9 @@ class PTPy(object):
                 knowledge=True, raw=False, **kwargs):
         '''Instantiate the correct class for a device automatically.'''
         # Determine transport
+        logger.debug('New PTPy')
         if transport is None:
-            logging.debug('Determining available transports')
+            logger.debug('Determining available transports')
             # TODO: Implement discovery across transports once PTPIP is added.
             transport = usb
 
@@ -75,7 +77,7 @@ class PTPy(object):
         if extension is None and not raw:
             plain = ptpy_factory(transport)
             try:
-                plain_camera = plain(device)
+                plain_camera = plain(device=device)
             except PTPError:
                 plain_camera = None
 
@@ -91,10 +93,10 @@ class PTPy(object):
 
         # Instantiate and construct.
         if raw:
-            logging.debug('Raw PTP only')
+            logger.debug('Raw PTP only')
             PTPy = ptpy_factory(transport)
         else:
-            logging.debug('Imposing {} extension'.format(extension))
+            logger.debug('Imposing {} extension'.format(extension))
             PTPy = ptpy_factory(
                 transport,
                 extension
@@ -106,6 +108,10 @@ class PTPy(object):
             instance._obtain_the_knowledge()
 
         return instance
+
+    def __init__(self, *args, **kwargs):
+        logger.debug('Init PTPy')
+        super(PTPy, self).__init__(*args, **kwargs)
 
 
 __all__ = (PTPy, PTPyError)

@@ -71,6 +71,7 @@ class IPTransport(object):
         self.__device = device
         self.__implicit_session_open = Event()
         self.__check_session_lock = Lock()
+        self.__transaction_lock = Lock()
 
     def _shutdown(self):
         self.__close_implicit_session()
@@ -513,11 +514,12 @@ class IPTransport(object):
             if ptp_container.Parameter else '',
         ))
         with self.__implicit_session():
-            self.__send_request(ptp_container)
-            self.__send_data(ptp_container, data)
-            # Get response and sneak in implicit SessionID and missing
-            # parameters.
-            return self.__recv()
+            with self.__transaction_lock:
+                self.__send_request(ptp_container)
+                self.__send_data(ptp_container, data)
+                # Get response and sneak in implicit SessionID and missing
+                # parameters.
+                return self.__recv()
 
     def recv(self, ptp_container):
         '''Transfer operation with dataphase from responder to initiator.'''
@@ -527,23 +529,24 @@ class IPTransport(object):
             if ptp_container.Parameter else '',
         ))
         with self.__implicit_session():
-            self.__send_request(ptp_container)
-            dataphase = self.__recv()
-            if hasattr(dataphase, 'Data'):
-                response = self.__recv()
-                if (
-                        (ptp_container.TransactionID != dataphase.TransactionID) or
-                        (ptp_container.SessionID != dataphase.SessionID) or
-                        (dataphase.TransactionID != response.TransactionID) or
-                        (dataphase.SessionID != response.SessionID)
-                ):
-                    raise PTPError(
-                        'Dataphase does not match with requested operation.'
-                    )
-                response['Data'] = dataphase.Data
-                return response
-            else:
-                return dataphase
+            with self.__transaction_lock:
+                self.__send_request(ptp_container)
+                dataphase = self.__recv()
+                if hasattr(dataphase, 'Data'):
+                    response = self.__recv()
+                    if (
+                            (ptp_container.TransactionID != dataphase.TransactionID) or
+                            (ptp_container.SessionID != dataphase.SessionID) or
+                            (dataphase.TransactionID != response.TransactionID) or
+                            (dataphase.SessionID != response.SessionID)
+                    ):
+                        raise PTPError(
+                            'Dataphase does not match with requested operation'
+                        )
+                    response['Data'] = dataphase.Data
+                    return response
+                else:
+                    return dataphase
 
     def mesg(self, ptp_container):
         '''Transfer operation without dataphase.'''
@@ -552,10 +555,11 @@ class IPTransport(object):
             self.__open_implicit_session()
 
         with self.__implicit_session():
-            self.__send_request(ptp_container)
-            # Get response and sneak in implicit SessionID and missing
-            # parameters for FullResponse.
-            response = self.__recv()
+            with self.__transaction_lock:
+                self.__send_request(ptp_container)
+                # Get response and sneak in implicit SessionID and missing
+                # parameters for FullResponse.
+                response = self.__recv()
 
         rc = response['ResponseCode']
         if op == 'OpenSession':

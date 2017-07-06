@@ -288,8 +288,8 @@ class IPTransport(object):
         # PTP/IP packets
         # Command
         self.__ProtocolVersion = Struct(
-            'Minor' / Int16ul,
             'Major' / Int16ul,
+            'Minor' / Int16ul,
         )
         self.__InitCommand = Embedded(Struct(
             'InitiatorGUID' / Array(16, Int8ul),

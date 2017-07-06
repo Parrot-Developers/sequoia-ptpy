@@ -6,10 +6,10 @@ support more operations.
 '''
 from __future__ import absolute_import
 from ..ptp import PTPError
+from ..util import _main_thread_alive
 from construct import (
-    Array, Bytes, Container, Embedded, Enum, ExprAdapter, Range, Struct,
-    Int16ul, Int32ul, Int64ul, Int8ul, RepeatUntil, ListContainer, Debugger,
-    Switch, Pass
+    Array, Bytes, Container, Debugger, Embedded, Enum, ExprAdapter, Int16ul,
+    Int32ul, Int64ul, Int8ul, Pass, Range, RepeatUntil, Struct, Switch,
 )
 from six.moves.queue import Queue
 import six
@@ -17,7 +17,6 @@ import socket
 import logging
 from contextlib import contextmanager
 from threading import Thread, Event, Lock
-from threading import enumerate as threading_enumerate
 from time import sleep
 import atexit
 
@@ -28,12 +27,6 @@ __all__ = ('IPTransport')
 __author__ = 'Luis Mario Domenzain'
 
 # TODO: Implement discovery mechanisms for PTP/IP like zeroconf.
-
-
-def _main_thread_alive():
-    return any(
-        (i.name == "MainThread") and i.is_alive() for i in
-        threading_enumerate())
 
 
 def create_connection(address):

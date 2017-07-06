@@ -110,8 +110,8 @@ class IPTransport(object):
         )
         self.__event_proc.daemon = False
         self.__event_shutdown = Event()
-        self.__event_proc.start()
         self.__implicit_session_open.set()
+        self.__event_proc.start()
 
     def __close_implicit_session(self):
         '''Terminate implicit session with responder'''

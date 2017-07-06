@@ -868,7 +868,7 @@ class PTP(object):
 
     def open_session(self):
         self._session += 1
-        self.__transaction = 1
+        self._transaction = 1
         ptp = Container(
             OperationCode='OpenSession',
             # Only the OpenSession operation is allowed to have a 0
@@ -886,7 +886,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='CloseSession',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.mesg(ptp)
@@ -898,7 +898,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='ResetDevice',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[],
         )
         response = self.recv(ptp)
@@ -910,7 +910,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='PowerDown',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[],
         )
         response = self.recv(ptp)
@@ -935,7 +935,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='ResetDevicePropValue',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[0xffffffff if reset_all else code],
         )
         response = self.recv(ptp)
@@ -947,7 +947,7 @@ class PTP(object):
             SessionID=self._session,
             # GetrDeviceInfo can happen outside a session. But if there is one
             # running just use that one.
-            TransactionID=(self.__transaction if self.__session_open else 0),
+            TransactionID=(self._transaction if self.__session_open else 0),
             Parameter=[]
         )
         response = self.recv(ptp)
@@ -957,7 +957,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetStorageIDs',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.recv(ptp)
@@ -967,7 +967,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetStorageInfo',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[storage_id]
         )
         response = self.recv(ptp)
@@ -991,7 +991,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetNumObjects',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[
                 0xffffffff if all_storage_ids else storage_id,
                 0xffffffff if all_formats else code,
@@ -1019,7 +1019,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetObjectHandles',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[
                 0xffffffff if all_storage_ids else storage_id,
                 0xffffffff if all_formats else code,
@@ -1052,7 +1052,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetDevicePropDesc',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[code]
         )
         response = self.recv(ptp)
@@ -1076,7 +1076,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetDevicePropValue',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[code],
         )
         response = self.recv(ptp)
@@ -1105,7 +1105,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='SetDevicePropValue',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[code],
         )
         response = self.send(ptp, value_payload)
@@ -1117,7 +1117,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='InitiateCapture',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[
                 storage_id,
                 code,
@@ -1132,7 +1132,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='InitiateOpenCapture',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[
                 storage_id,
                 code,
@@ -1146,7 +1146,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='TerminateOpenCapture',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[
                 transaction_id,
             ]
@@ -1159,7 +1159,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetObjectInfo',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[handle]
         )
         response = self.recv(ptp)
@@ -1174,7 +1174,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='SendObject',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.send(ptp, bytes_data)
@@ -1191,7 +1191,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetObject',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[handle]
         )
         return self.recv(ptp)
@@ -1209,7 +1209,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetPartialObject',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[handle,
                        offset,
                        0xFFFFFFFF if until_end else max_bytes]
@@ -1236,7 +1236,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='DeleteObject',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[
                 0xFFFFFFFF if delete_all else handle,
                 code,
@@ -1259,7 +1259,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='MoveObject',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[
                 handle,
                 storage_id,
@@ -1283,7 +1283,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='CopyObject',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[
                 handle,
                 storage_id,
@@ -1299,7 +1299,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetThumb',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[handle]
         )
         return self.recv(ptp)
@@ -1316,7 +1316,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetResizedImageObject',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[handle, width, height]
         )
         return self.recv(ptp)
@@ -1327,7 +1327,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetVendorExtensionMaps',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[]
         )
         response = self.recv(ptp)
@@ -1342,7 +1342,7 @@ class PTP(object):
         ptp = Container(
             OperationCode='GetVendorDeviceInfo',
             SessionID=self._session,
-            TransactionID=self.__transaction,
+            TransactionID=self._transaction,
             Parameter=[code]
         )
         response = self.recv(ptp)

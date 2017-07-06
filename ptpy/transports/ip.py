@@ -479,7 +479,6 @@ class IPTransport(object):
         while ip.sendall(packet) is not None:
             logger.debug('Failed to send {} packet'.format(ptp_container.Type))
 
-
     def __send_request(self, ptp_container):
         '''Send PTP request without checking answer.'''
         # Don't modify original container to keep abstraction barrier.
@@ -516,7 +515,8 @@ class IPTransport(object):
         with self.__implicit_session():
             self.__send_request(ptp_container)
             self.__send_data(ptp_container, data)
-            # Get response and sneak in implicit SessionID and missing parameters.
+            # Get response and sneak in implicit SessionID and missing
+            # parameters.
             return self.__recv()
 
     def recv(self, ptp_container):

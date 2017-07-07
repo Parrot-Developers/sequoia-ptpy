@@ -127,6 +127,8 @@ class IPTransport(object):
         # Only join a running thread.
         if self.__event_proc.is_alive():
             self.__event_proc.join(2)
+        if self.__ping_pong_proc.is_alive():
+            self.__ping_pong_proc.join(2)
 
         logger.debug('Close connections for {}'.format(repr(self.__dev)))
         try:

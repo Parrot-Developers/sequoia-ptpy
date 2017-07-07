@@ -74,7 +74,10 @@ class IPTransport(object):
         self.__transaction_lock = Lock()
 
     def _shutdown(self):
-        self.__close_implicit_session()
+        try:
+            self.__close_implicit_session()
+        except Exception as e:
+            logger.error(e)
 
     @contextmanager
     def __implicit_session(self):

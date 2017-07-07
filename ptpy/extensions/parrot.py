@@ -313,8 +313,8 @@ class Parrot(object):
         )
 
     def _set_endian(self, endian):
-        logger.debug('Set Parrot endianness')
         super(Parrot, self)._set_endian(endian)
+        logger.debug('Set Parrot endianness')
         self._Sunshine = self._Sunshine()
         self._Temperature = self._Temperature()
         self._Angle = self._Angle()

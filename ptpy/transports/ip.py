@@ -17,7 +17,7 @@ import socket
 import logging
 from contextlib import contextmanager
 from threading import Thread, Event, Lock
-from time import sleep
+from time import sleep, time
 import atexit
 
 # TODO: Deal with timeouts equivalent to those in the USB transport
@@ -69,9 +69,16 @@ class IPTransport(object):
                 'IP discovery not implemented. Please provide a device.'
             )
         self.__device = device
+
+        # Signal usable implicit session
         self.__implicit_session_open = Event()
+        # Signal implicit session is shutting down
+        self.__implicit_session_shutdown = Event()
+
         self.__check_session_lock = Lock()
         self.__transaction_lock = Lock()
+
+        self.__event_queue = Queue()
 
         atexit.register(self._shutdown)
 
@@ -102,6 +109,9 @@ class IPTransport(object):
 
     def __open_implicit_session(self):
         '''Establish implicit session with responder'''
+
+        self.__implicit_session_shutdown.clear()
+
         # Establish Command and Event connections
         if type(self.__device) is tuple:
             host, port = self.__device
@@ -109,22 +119,33 @@ class IPTransport(object):
         else:
             self.__setup_connection(self.__device)
 
-        self.__event_queue = Queue()
+        self.__implicit_session_open.set()
+
+        # Prepare Event and Probe threads
         self.__event_proc = Thread(
             name='EvtPolling',
             target=self.__poll_events
         )
         self.__event_proc.daemon = False
-        self.__event_shutdown = Event()
-        self.__implicit_session_open.set()
+
+        self.__ping_pong_proc = Thread(
+            name='PingPong',
+            target=self.__ping_pong
+        )
+        self.__ping_pong_proc.daemon = False
+
+        # Launch Event and Probe threads
         self.__event_proc.start()
+        self.__ping_pong_proc.start()
 
     def __close_implicit_session(self):
         '''Terminate implicit session with responder'''
-        self.__event_shutdown.set()
+        self.__implicit_session_shutdown.set()
+
         if not self.__implicit_session_open.is_set():
             return
-        # Only join a running thread.
+
+        # Only join running threads.
         if self.__event_proc.is_alive():
             self.__event_proc.join(2)
         if self.__ping_pong_proc.is_alive():

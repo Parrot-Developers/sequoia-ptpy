@@ -73,6 +73,8 @@ class IPTransport(object):
         self.__check_session_lock = Lock()
         self.__transaction_lock = Lock()
 
+        atexit.register(self._shutdown)
+
     def _shutdown(self):
         try:
             self.__close_implicit_session()
@@ -579,9 +581,7 @@ class IPTransport(object):
 
         rc = response['ResponseCode']
         if op == 'OpenSession':
-            if rc == 'OK':
-                atexit.register(self.__close_implicit_session)
-            else:
+            if rc != 'OK':
                 self.__close_implicit_session()
         elif op == 'CloseSession':
             if rc == 'OK':

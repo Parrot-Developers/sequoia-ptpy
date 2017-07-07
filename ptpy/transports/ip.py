@@ -606,9 +606,31 @@ class IPTransport(object):
 
     def __poll_events(self):
         '''Poll events, adding them to a queue.'''
-        while not self.__event_shutdown.is_set() and _main_thread_alive():
+        logger.debug('Start')
+        while (
+                not self.__implicit_session_shutdown.is_set() and
+                self.__implicit_session_open.is_set() and
+                _main_thread_alive()
+        ):
             evt = self.__recv(event=True, wait=False, raw=True)
-            sleep(5e-3)
             if evt is not None:
                 logger.debug('Event queued')
                 self.__event_queue.put(evt)
+            sleep(5e-3)
+        logger.debug('Stop')
+
+    def __ping_pong(self):
+        '''Poll events, adding them to a queue.'''
+        logger.debug('Start')
+        last = time()
+        while (
+                not self.__implicit_session_shutdown.is_set() and
+                self.__implicit_session_open.is_set() and
+                _main_thread_alive()
+        ):
+            if time() - last > 10:
+                logger.debug('PING')
+                # TODO: implement Ping Pong
+                last = time()
+            sleep(0.10)
+        logger.debug('Stop')

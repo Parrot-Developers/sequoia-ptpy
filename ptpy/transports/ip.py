@@ -127,8 +127,20 @@ class IPTransport(object):
             self.__event_proc.join(2)
 
         logger.debug('Close connections for {}'.format(repr(self.__dev)))
-        self.__evtcon.shutdown(socket.SHUT_RDWR)
-        self.__cmdcon.shutdown(socket.SHUT_RDWR)
+        try:
+            self.__evtcon.shutdown(socket.SHUT_RDWR)
+        except socket.error as e:
+            if e.errno == 107:
+                pass
+            else:
+                raise e
+        try:
+            self.__cmdcon.shutdown(socket.SHUT_RDWR)
+        except socket.error as e:
+            if e.errno == 107:
+                pass
+            else:
+                raise e
         self.__evtcon.close()
         self.__cmdcon.close()
         self.__implicit_session_open.clear()

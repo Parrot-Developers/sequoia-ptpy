@@ -429,7 +429,8 @@ class IPTransport(object):
 
                 if len(ipdata) == 0 and not event:
                     raise PTPError('Command connection dropped')
-                # Read a single entire packet
+                elif event:
+                    return None
                 while len(ipdata) < hdrlen:
                     ipdata += ip.recv(hdrlen - len(ipdata))
                 header = self.__Header.parse(

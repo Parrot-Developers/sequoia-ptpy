@@ -168,6 +168,7 @@ class IPTransport(object):
                 raise e
         self.__evtcon.close()
         self.__cmdcon.close()
+
         self.__implicit_session_open.clear()
 
     def __setup_connection(self, host=None, port=15740):
@@ -456,11 +457,14 @@ class IPTransport(object):
                     raise PTPError('Command connection dropped')
                 elif event:
                     return None
+
+                # Read a single entire header
                 while len(ipdata) < hdrlen:
                     ipdata += ip.recv(hdrlen - len(ipdata))
                 header = self.__Header.parse(
                     ipdata[0:hdrlen]
                 )
+                # Read a single entire packet
                 while len(ipdata) < header.Length:
                     ipdata += ip.recv(header.Length - len(ipdata))
                 # Run sanity checks.

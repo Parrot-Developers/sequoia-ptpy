@@ -104,8 +104,9 @@ with camera.session():
     print(camera.transaction_id)
 ```
 
-# Transport
+# Transports
 
+## USB
 A proof-of-concept USB implementation is provided using PyUSB. Though it might
 not work with all USB controllers in cameras today. In some operating systems,
 it might be necessary to be `root` in order to access USB devices directly.
@@ -113,6 +114,21 @@ it might be necessary to be `root` in order to access USB devices directly.
 For the USB transport, the `_shutdown` method is provided to explicitly release
 the USB interface. At the end of the Python interpreter session this will happen
 automatically.
+
+## IP
+A proof-of-concept PTP/IP implementation is provided using sockets. Since there
+is no device discovery implemented yet, the address must be provided directly.
+
+```python
+from ptpy import PTPy
+from ptpy.transports.ip import IPTransport
+
+# Default PTP/IP port assumed
+c = PTPy(transport=IPTransport, device='197.168.47.1')
+
+# Optionally:
+c = PTPy(transport=IPTransport, device=('197.168.47.1', 15740))
+```
 
 # Extensions
 

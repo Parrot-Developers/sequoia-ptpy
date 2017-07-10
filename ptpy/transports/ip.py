@@ -29,6 +29,10 @@ __author__ = 'Luis Mario Domenzain'
 # TODO: Implement discovery mechanisms for PTP/IP like zeroconf.
 
 
+def actual_socket(sock_object):
+    """Get the actual object with sendall and shutdown methods"""
+    return sock_object._sock if hasattr(sock_object, '_sock') else sock_object
+
 def create_connection(address):
     """Connect to address and return the socket object. """
 
@@ -198,9 +202,9 @@ class IPTransport(object):
                 Payload=init_cmd_req_payload,
             )
         )
-        self.__cmdcon._sock.sendall(init_cmd_req)
+        actual_socket(self.__cmdcon).sendall(init_cmd_req)
         # Get ACK/NACK
-        init_cmd_req_rsp = self.__cmdcon._sock.recv(72)
+        init_cmd_req_rsp = actual_socket(self.__cmdcon).recv(72)
         init_cmd_rsp_hdr = self.__Header.parse(
             init_cmd_req_rsp[0:hdrlen]
         )
@@ -240,9 +244,9 @@ class IPTransport(object):
                 Payload=payload,
             )
         )
-        self.__evtcon._sock.sendall(evt_req)
+        actual_socket(self.__evtcon).sendall(evt_req)
         # Get ACK/NACK
-        init_evt_req_rsp = self.__evtcon._sock.recv(
+        init_evt_req_rsp = actual_socket(self.__evtcon).recv(
             hdrlen + self.__InitFail.sizeof()
         )
         init_evt_rsp_hdr = self.__Header.parse(
@@ -442,7 +446,7 @@ class IPTransport(object):
         '''Helper method for receiving packets.'''
         hdrlen = self.__Header.sizeof()
         with self.__implicit_session():
-            ip = self.__evtcon._sock if event else self.__cmdcon._sock
+            ip = actual_socket(self.__evtcon) if event else actual_socket(self.__cmdcon)
             data = bytes()
             while True:
                 try:
@@ -521,7 +525,11 @@ class IPTransport(object):
     def __send(self, ptp_container, event=False):
         '''Helper method for sending packets.'''
         packet = self.__Packet.build(ptp_container)
-        ip = self.__evtcon._sock if event else self.__cmdcon._sock
+        ip = (
+            actual_socket(self.__evtcon)
+            if event
+            else actual_socket(self.__cmdcon)
+        )
         while ip.sendall(packet) is not None:
             logger.debug('Failed to send {} packet'.format(ptp_container.Type))
 

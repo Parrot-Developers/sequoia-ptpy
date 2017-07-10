@@ -9,11 +9,11 @@ and may need to be adapted to transport-endianness by calling
 `'native'`.
 '''
 from construct import (
-    Array, BitsInteger, Computed, Container, Embedded, Enum, ExprAdapter,
-    Int16sb, Int16sl, Int16sn, Int16ub, Int16ul, Int16un, Int32sb, Int32sl,
-    Int32sn, Int32ub, Int32ul, Int32un, Int64sb, Int64sl, Int64sn, Int64ub,
-    Int64ul, Int64un, Int8sb, Int8sl, Int8sn, Int8ub, Int8ul, Int8un, Pass,
-    PrefixedArray, Sequence, Struct, Switch,
+    Array, BitsInteger, Computed, Container, Enum, ExprAdapter, Int16sb,
+    Int16sl, Int16sn, Int16ub, Int16ul, Int16un, Int32sb, Int32sl, Int32sn,
+    Int32ub, Int32ul, Int32un, Int64sb, Int64sl, Int64sn, Int64ub, Int64ul,
+    Int64un, Int8sb, Int8sl, Int8sn, Int8ub, Int8ul, Int8un, Pass,
+    PrefixedArray, Struct, Switch,
     )
 from contextlib import contextmanager
 from dateutil.parser import parse as iso8601
@@ -512,11 +512,11 @@ class PTP(object):
         )
 
     def _RangeForm(self, element):
-        return Embedded(Sequence(
+        return Struct(
                 'MinimumValue' / element,
                 'MaximumValue' / element,
                 'StepSize' / element,
-            ))
+            )
 
     def _EnumerationForm(self, element):
         return PrefixedArray(self._UInt16, element)

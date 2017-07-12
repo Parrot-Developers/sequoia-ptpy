@@ -2,9 +2,15 @@
 Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
+from ..utils import _main_thread_alive
 from construct import (
     Container, PrefixedArray, Struct,
 )
+from contextlib import contextmanager
+from six.moves.queue import Queue
+from threading import Thread, Event
+from time import sleep
+import atexit
 import logging
 logger = logging.getLogger(__name__)
 
@@ -16,7 +22,49 @@ class Nikon(object):
 
     def __init__(self, *args, **kwargs):
         logger.debug('Init Nikon')
+        # TODO: expose the choice to poll or not Nikon events
+        self.__no_polling = False
         super(Nikon, self).__init__(*args, **kwargs)
+
+    @contextmanager
+    def session(self):
+        '''
+        Manage Nikon session with context manager.
+        '''
+        # When raw device, do not perform
+        if self.__no_polling:
+            with super(Nikon, self).session():
+                yield
+            return
+        # Within a normal PTP session
+        with super(Nikon, self).session():
+            # launch a polling thread
+            self.__event_queue = Queue()
+            self.__nikon_event_shutdown = Event()
+            self.__nikon_event_proc = Thread(
+                name='NikonEvtPolling',
+                target=self.__nikon_poll_events
+            )
+            self.__nikon_event_proc.daemon = False
+            atexit.register(self._nikon_shutdown)
+            self.__nikon_event_proc.start()
+
+            try:
+                yield
+            finally:
+                self._nikon_shutdown()
+
+    def _shutdown(self):
+        self._nikon_shutdown()
+        super(Nikon, self)._shutdown()
+
+    def _nikon_shutdown(self):
+        logger.debug('Shutdown Nikon events')
+        self.__nikon_event_shutdown.set()
+
+        # Only join a running thread.
+        if self.__nikon_event_proc.is_alive():
+            self.__nikon_event_proc.join(2)
 
     def _PropertyCode(self, **product_properties):
         props = {
@@ -427,3 +475,33 @@ class Nikon(object):
             Parameter=[]
         )
         return self.mesg(ptp)
+
+    def event(self, wait=False):
+        '''Check Nikon or PTP events
+
+        If `wait` this function is blocking. Otherwise it may return None.
+        '''
+        # TODO: Do something reasonable on wait=True
+        evt = None
+        timeout = None if wait else 0.001
+        # TODO: Join queues to preserve order of Nikon and PTP events.
+        if not self.__event_queue.empty():
+            evt = self.__event_queue.get(block=not wait, timeout=timeout)
+        else:
+            evt = super(Nikon, self).event(wait=wait)
+
+        return evt
+
+    def __nikon_poll_events(self):
+        '''Poll events, adding them to a queue.'''
+        while (not self.__nikon_event_shutdown.is_set() and
+               _main_thread_alive()):
+            try:
+                evts = self.check_events()
+                if evts:
+                    for evt in evts:
+                        logger.debug('Event queued')
+                        self.__event_queue.put(evt)
+            except Exception as e:
+                logger.error(e)
+            sleep(3)

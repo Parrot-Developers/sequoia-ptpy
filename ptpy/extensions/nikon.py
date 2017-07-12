@@ -506,3 +506,4 @@ class Nikon(object):
             except Exception as e:
                 logger.error(e)
             sleep(3)
+        self.__nikon_event_shutdown.clear()

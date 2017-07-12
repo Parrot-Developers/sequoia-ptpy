@@ -809,3 +809,4 @@ class Canon(object):
             except Exception as e:
                 logger.error(e)
             sleep(3)
+        self.__eos_event_shutdown.clear()

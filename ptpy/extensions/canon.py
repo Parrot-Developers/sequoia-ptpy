@@ -780,6 +780,22 @@ class Canon(object):
     # TODO: implement EOSFAPIMessageTX
     # TODO: implement EOSFAPIMessageRX
 
+    def event(self, wait=False):
+        '''Check Canon or PTP events
+
+        If `wait` this function is blocking. Otherwise it may return None.
+        '''
+        # TODO: Do something reasonable on wait=True
+        evt = None
+        timeout = None if wait else 0.001
+        # TODO: Join queues to preserve order of Canon and PTP events.
+        if not self.__event_queue.empty():
+            evt = self.__event_queue.get(block=not wait, timeout=timeout)
+        else:
+            evt = super(Canon, self).event(wait=wait)
+
+        return evt
+
     def __eos_poll_events(self):
         '''Poll events, adding them to a queue.'''
         while not self.__eos_event_shutdown.is_set() and _main_thread_alive():

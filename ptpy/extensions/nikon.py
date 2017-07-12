@@ -26,6 +26,7 @@ class Nikon(object):
         # TODO: expose the choice to poll or not Nikon events
         self.__no_polling = False
         self.__nikon_event_shutdown = Event()
+        self.__nikon_event_proc = None
 
     @contextmanager
     def session(self):
@@ -63,7 +64,7 @@ class Nikon(object):
         self.__nikon_event_shutdown.set()
 
         # Only join a running thread.
-        if self.__nikon_event_proc.is_alive():
+        if self.__nikon_event_proc and self.__nikon_event_proc.is_alive():
             self.__nikon_event_proc.join(2)
 
     def _PropertyCode(self, **product_properties):

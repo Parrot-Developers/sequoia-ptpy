@@ -27,6 +27,7 @@ class Canon(object):
         # TODO: expose the choice to poll or not Canon events
         self.__no_polling = False
         self.__eos_event_shutdown = Event()
+        self.__eos_event_proc = None
 
     @contextmanager
     def session(self):
@@ -67,7 +68,7 @@ class Canon(object):
         self.__eos_event_shutdown.set()
 
         # Only join a running thread.
-        if self.__eos_event_proc.is_alive():
+        if self.__eos_event_proc and self.__eos_event_proc.is_alive():
             self.__eos_event_proc.join(2)
 
     def _PropertyCode(self, **product_properties):

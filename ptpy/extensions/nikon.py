@@ -22,9 +22,10 @@ class Nikon(object):
 
     def __init__(self, *args, **kwargs):
         logger.debug('Init Nikon')
+        super(Nikon, self).__init__(*args, **kwargs)
         # TODO: expose the choice to poll or not Nikon events
         self.__no_polling = False
-        super(Nikon, self).__init__(*args, **kwargs)
+        self.__nikon_event_shutdown = Event()
 
     @contextmanager
     def session(self):
@@ -40,7 +41,6 @@ class Nikon(object):
         with super(Nikon, self).session():
             # launch a polling thread
             self.__event_queue = Queue()
-            self.__nikon_event_shutdown = Event()
             self.__nikon_event_proc = Thread(
                 name='NikonEvtPolling',
                 target=self.__nikon_poll_events

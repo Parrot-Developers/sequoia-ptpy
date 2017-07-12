@@ -2,7 +2,7 @@
 Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
-from ..utils import _main_thread_alive
+from ..util import _main_thread_alive
 from construct import (
     Container, PrefixedArray, Struct,
 )

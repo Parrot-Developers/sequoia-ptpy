@@ -23,9 +23,10 @@ class Canon(object):
     '''This class implements Canon's PTP operations.'''
     def __init__(self, *args, **kwargs):
         logger.debug('Init Canon')
+        super(Canon, self).__init__(*args, **kwargs)
         # TODO: expose the choice to poll or not Canon events
         self.__no_polling = False
-        super(Canon, self).__init__(*args, **kwargs)
+        self.__eos_event_shutdown = Event()
 
     @contextmanager
     def session(self):
@@ -44,7 +45,6 @@ class Canon(object):
             self.eos_event_mode(1)
             # And launch a polling thread
             self.__event_queue = Queue()
-            self.__eos_event_shutdown = Event()
             self.__eos_event_proc = Thread(
                 name='EOSEvtPolling',
                 target=self.__eos_poll_events

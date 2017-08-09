@@ -90,7 +90,7 @@ class PTPy(object):
                     # cameras.
                     extension = known_extensions[device_info.VendorExtensionID]
                 except KeyError:
-                    extension = None
+                    pass
 
         # Instantiate and construct.
         if raw:

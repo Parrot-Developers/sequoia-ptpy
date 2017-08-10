@@ -320,36 +320,33 @@ class USBTransport(object):
         lock = self.__intep_lock if event else self.__inep_lock
         usbdata = array.array('B', [])
         with lock:
-            try:
-                usbdata += ep.read(
-                    ep.wMaxPacketSize,
-                    timeout=0 if wait else None
-                )
-                tries = 0
-                while len(usbdata) < self.__Header.sizeof() and tries < 5:
+            tries = 0
+            # Attempt to read a header
+            while len(usbdata) < self.__Header.sizeof() and tries < 5:
+                if tries > 0:
                     logger.debug('Data smaller than a header')
                     logger.debug(
                         'Requesting {} bytes of data'
                         .format(ep.wMaxPacketSize)
                     )
+                try:
                     usbdata += ep.read(
                         ep.wMaxPacketSize,
-                        timeout=1000
+                        # Only wait from the second try or if requested.
+                        timeout=1000 if tries > 0 else (0 if wait else None)
                     )
-                    tries += 1
-                logger.debug('Read {} bytes of data'.format(len(usbdata)))
-            except usb.core.USBError as e:
-                # Ignore timeout or busy device once.
-                if e.errno == 110 or e.errno == 16:
-                    if event:
-                        return None
+                except usb.core.USBError as e:
+                    # Return None on timeout or busy for events
+                    if e is None or e.errno == 110 or e.errno == 16:
+                        if event:
+                            return None
+                        else:
+                            logger.debug('Ignored exception: {}'.format(e))
                     else:
-                        usbdata += ep.read(
-                            ep.wMaxPacketSize,
-                            timeout=5000
-                        )
-                else:
-                    raise e
+                        logger.error(e)
+                        raise e
+                tries += 1
+            logger.debug('Read {} bytes of data'.format(len(usbdata)))
 
             if len(usbdata) == 0:
                 if event:
@@ -359,9 +356,9 @@ class USBTransport(object):
 
             if (
                     logger.isEnabledFor(logging.DEBUG) and
-                    (len(usbdata) < self.__Header.sizeof())
+                    len(usbdata) < self.__Header.sizeof()
             ):
-                logger.debug('Incomplete packet')
+                logger.debug('Incomplete header')
                 for l in hexdump(
                         six.binary_type(bytearray(usbdata)),
                         result='generator'

@@ -123,28 +123,32 @@ class USBTransport(object):
         '''From the cameras given, get the first one that does not fail'''
 
         for _ in self.__available_cameras(devs):
+            # Stop system drivers
             try:
                 if self.__dev.is_kernel_driver_active(
                         self.__intf.bInterfaceNumber):
                     try:
                         self.__dev.detach_kernel_driver(
                             self.__intf.bInterfaceNumber)
-                        usb.util.claim_interface(self.__dev, self.__intf)
                     except usb.core.USBError:
                         message = (
                             'Could not detach kernel driver. '
                             'Maybe the camera is mounted?'
                         )
                         logger.error(message)
+            except Exception as e:
+                logger.debug('Ignoring unimplemented function: {}'.format(e))
+            # Claim camera
+            try:
                 logger.debug('Claiming {}'.format(repr(self.__dev)))
                 usb.util.claim_interface(self.__dev, self.__intf)
             except Exception as e:
-                logger.debug('{}'.format(e))
+                logger.debug('failed to claim PTP device: {}'.format(e))
                 continue
             break
         else:
             message = (
-                'Could acquire any camera.'
+                'Could not acquire any camera.'
             )
             logger.error(message)
             raise PTPError(message)

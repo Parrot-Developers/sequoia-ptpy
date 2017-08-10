@@ -325,14 +325,19 @@ class USBTransport(object):
                     ep.wMaxPacketSize,
                     timeout=0 if wait else None
                 )
-                if len(usbdata) < self.__Header.sizeof():
-                    logger.debug('Initial read smaller than a header')
-                    tries = 5
-                    for _ in range(tries):
-                        usbdata += ep.read(
-                            ep.wMaxPacketSize,
-                            timeout=5000/tries
-                        )
+                tries = 0
+                while len(usbdata) < self.__Header.sizeof() and tries < 5:
+                    logger.debug('Data smaller than a header')
+                    logger.debug(
+                        'Requesting {} bytes of data'
+                        .format(ep.wMaxPacketSize)
+                    )
+                    usbdata += ep.read(
+                        ep.wMaxPacketSize,
+                        timeout=1000
+                    )
+                    tries += 1
+                logger.debug('Read {} bytes of data'.format(len(usbdata)))
             except usb.core.USBError as e:
                 # Ignore timeout or busy device once.
                 if e.errno == 110 or e.errno == 16:

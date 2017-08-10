@@ -379,7 +379,7 @@ class USBTransport(object):
                 )
             while len(usbdata) < header.Length:
                 usbdata += ep.read(
-                    ep.wMaxPacketSize,
+                    header.Length - len(usbdata),
                     timeout=5000
                 )
         if raw:

@@ -10,16 +10,27 @@ from .transports.usb import USBTransport as usb
 from .transports.ip import IPTransport as ip
 
 import os
-import coloredlogs
+import sys
 import logging
+from rainbow_logging_handler import RainbowLoggingHandler
 
+# Set up logging
 logger = logging.getLogger(__name__)
+formatter = logging.Formatter(
+    '%(levelname).1s '
+    '%(asctime)s '
+    '%(name)s'
+    '[%(threadName)s:%(funcName)s:%(lineno)s] '
+    '%(message)s'
+)
+handler = RainbowLoggingHandler(
+    sys.stderr,
+)
+level = 'DEBUG' if 'PTPY_DEBUG' in os.environ else 'INFO'
 
-# Set up full logging level when DEBUG is defined as in the environment
-coloredlogs.install(
-    level='DEBUG' if 'PTPY_DEBUG' in os.environ else 'INFO',
-    fmt='%(levelname)s %(asctime)s %(name)s[%(threadName)s] %(message)s',
-    )
+logger.setLevel(level)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 if 'PTPY_DEBUG_LOG' in os.environ:
     logger.addHandler(logging.FileHandler(os.environ['PTPY_DEBUG_LOG']))
 

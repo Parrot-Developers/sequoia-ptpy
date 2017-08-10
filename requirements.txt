@@ -1,6 +1,6 @@
-python-dateutil>=1.5
 construct>=2.8.8
-pyusb>=1.0.0rc1
-six>=1.10.0
-coloredlogs>=5.2
 hexdump>=3.3
+python-dateutil>=1.5
+pyusb>=1.0.0rc1
+rainbow-logging-handler>=2.2.2
+six>=1.10.0

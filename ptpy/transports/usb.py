@@ -337,7 +337,12 @@ class USBTransport(object):
                     )
                 except usb.core.USBError as e:
                     # Return None on timeout or busy for events
-                    if e is None or e.errno == 110 or e.errno == 16:
+                    if (
+                            (e.errno is None and
+                             ('timeout' in e.message or
+                              'busy' in e.message)) or
+                            (e.errno == 110 or e.errno == 16)
+                    ):
                         if event:
                             return None
                         else:
@@ -394,7 +399,12 @@ class USBTransport(object):
                 ep.write(transaction, timeout=1)
             except usb.core.USBError as e:
                 # Ignore timeout or busy device once.
-                if e.errno == 110 or e.errno == 16:
+                if (
+                        (e.errno is None and
+                         ('timeout' in e.message or
+                          'busy' in e.message)) or
+                        (e.errno == 110 or e.errno == 16)
+                ):
                     ep.write(transaction, timeout=5000)
 
     def __send_request(self, ptp_container):

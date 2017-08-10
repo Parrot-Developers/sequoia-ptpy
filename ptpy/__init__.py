@@ -18,7 +18,7 @@ from rainbow_logging_handler import RainbowLoggingHandler
 logger = logging.getLogger(__name__)
 formatter = logging.Formatter(
     '%(levelname).1s '
-    '%(asctime)s '
+    '%(relativeCreated)d '
     '%(name)s'
     '[%(threadName)s:%(funcName)s:%(lineno)s] '
     '%(message)s'

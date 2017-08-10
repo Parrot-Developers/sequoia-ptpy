@@ -339,8 +339,8 @@ class USBTransport(object):
                     # Return None on timeout or busy for events
                     if (
                             (e.errno is None and
-                             ('timeout' in e.message or
-                              'busy' in e.message)) or
+                             ('timeout' in e.strerror or
+                              'busy' in e.strerror)) or
                             (e.errno == 110 or e.errno == 16)
                     ):
                         if event:
@@ -401,8 +401,8 @@ class USBTransport(object):
                 # Ignore timeout or busy device once.
                 if (
                         (e.errno is None and
-                         ('timeout' in e.message or
-                          'busy' in e.message)) or
+                         ('timeout' in e.strerror or
+                          'busy' in e.strerror)) or
                         (e.errno == 110 or e.errno == 16)
                 ):
                     ep.write(transaction, timeout=5000)

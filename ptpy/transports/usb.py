@@ -323,7 +323,7 @@ class USBTransport(object):
             try:
                 usbdata += ep.read(
                     ep.wMaxPacketSize,
-                    timeout=0 if wait else 5
+                    timeout=0 if wait else None
                 )
                 if len(usbdata) < self.__Header.sizeof():
                     logger.debug('Initial read smaller than a header')

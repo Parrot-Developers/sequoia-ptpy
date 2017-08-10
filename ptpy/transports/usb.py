@@ -285,7 +285,10 @@ class USBTransport(object):
         logger.debug('Transaction:')
         usbdata = bytearray(usbdata)
         if logger.isEnabledFor(logging.DEBUG):
-            for l in hexdump(six.binary_type(usbdata), result='generator'):
+            for l in hexdump(
+                    six.binary_type(usbdata[:512]),
+                    result='generator'
+            ):
                 logger.debug(l)
         transaction = self.__ResponseTransaction.parse(usbdata)
         response = Container(

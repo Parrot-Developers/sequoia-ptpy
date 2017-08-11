@@ -136,7 +136,7 @@ class USBTransport(object):
                             'Maybe the camera is mounted?'
                         )
                         logger.error(message)
-            except Exception as e:
+            except NotImplementedError as e:
                 logger.debug('Ignoring unimplemented function: {}'.format(e))
             # Claim camera
             try:

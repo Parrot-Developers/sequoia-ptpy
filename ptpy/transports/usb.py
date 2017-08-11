@@ -341,7 +341,7 @@ class USBTransport(object):
                             (e.errno is None and
                              ('timeout' in e.strerror or
                               'busy' in e.strerror)) or
-                            (e.errno == 110 or e.errno == 16)
+                            (e.errno == 110 or e.errno == 16 or e.errno == 5)
                     ):
                         if event:
                             return None
@@ -403,7 +403,7 @@ class USBTransport(object):
                         (e.errno is None and
                          ('timeout' in e.strerror or
                           'busy' in e.strerror)) or
-                        (e.errno == 110 or e.errno == 16)
+                        (e.errno == 110 or e.errno == 16 or e.errno == 5)
                 ):
                     ep.write(transaction, timeout=5000)
 

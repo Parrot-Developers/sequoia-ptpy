@@ -565,5 +565,14 @@ class USBTransport(object):
                 if evt is not None:
                     logger.debug('Event queued')
                     self.__event_queue.put(evt)
+            except usb.core.USBError as e:
+                logger.error(
+                    '{} polling exception: {}'.format(repr(self.__dev), e)
+                )
+                # check if disconnected
+                if e.errno == 19:
+                    break
             except Exception as e:
-                logger.error(e)
+                logger.error(
+                    '{} polling exception: {}'.format(repr(self.__dev), e)
+                )

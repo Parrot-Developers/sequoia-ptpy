@@ -23,7 +23,7 @@ and load it so that the interaction is seamless.
 from ptpy import PTPy
 
 camera = PTPy()
-print camera.get_device_info()
+print(camera.get_device_info())
 
 with camera.session():
     camera.initiate_capture()
@@ -38,7 +38,7 @@ extension to use. E.g. when the PTP Extension ID has not been assigned.
 from ptpy import PTPy
 
 camera = PTPy(raw=True)
-print camera.get_device_info()
+print(camera.get_device_info())
 
 with camera.session():
     # Do basic things here.

@@ -375,7 +375,7 @@ class USBTransport(object):
             )
             if header.Type not in ['Response', 'Data', 'Event']:
                 raise PTPError(
-                    'Unexpected USB transfer type.'
+                    'Unexpected USB transfer type. '
                     'Expected Response, Event or Data but received {}'
                     .format(header.Type)
                 )
@@ -473,16 +473,41 @@ class USBTransport(object):
             dataphase = self.__recv()
             if hasattr(dataphase, 'Data'):
                 response = self.__recv()
-                if (
-                        (ptp_container.OperationCode != dataphase.OperationCode) or
-                        (ptp_container.TransactionID != dataphase.TransactionID) or
-                        (ptp_container.SessionID != dataphase.SessionID) or
-                        (dataphase.TransactionID != response.TransactionID) or
-                        (dataphase.SessionID != response.SessionID)
-                ):
+                if not (ptp_container.SessionID ==
+                        dataphase.SessionID ==
+                        response.SessionID):
+                    self.__dev.reset()
                     raise PTPError(
-                        'Dataphase does not match with requested operation.'
+                        'Dataphase session ID missmatch: {}, {}, {}.'
+                        .format(
+                            ptp_container.SessionID,
+                            dataphase.SessionID,
+                            response.SessionID
+                        )
                     )
+                if not (ptp_container.TransactionID ==
+                        dataphase.TransactionID ==
+                        response.TransactionID):
+                    self.__dev.reset()
+                    raise PTPError(
+                        'Dataphase transaction ID missmatch: {}, {}, {}.'
+                        .format(
+                            ptp_container.TransactionID,
+                            dataphase.TransactionID,
+                            response.TransactionID
+                        )
+                    )
+                if not (ptp_container.OperationCode ==
+                        dataphase.OperationCode):
+                    self.__dev.reset()
+                    raise PTPError(
+                        'Dataphase operation code missmatch: {}, {}.'.
+                        format(
+                            ptp_container.OperationCode,
+                            dataphase.OperationCode
+                        )
+                    )
+
                 response['Data'] = dataphase.Data
             else:
                 response = dataphase

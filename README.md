@@ -137,8 +137,10 @@ c = PTPy(transport=IPTransport, device=('197.168.47.1', 15740))
 Full support for the Parrot Drone SAS extension is provided. Extensions are
 meant to provice vendor-specific sets of operations, events and properties.
 
-Partial support for Canon and Microsoft (MTP) extensions is provided. Full
-support is expected eventually.
+Partial support for Canon, Microsoft (MTP), and Nikon extensions is provided.
+Full support is expected eventually.
+
+Canon and Nikon extensions integrate their specific events mechanisms.
 
 Extensions are managed automatically for users or can be imposed by developers.
 

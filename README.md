@@ -161,7 +161,10 @@ command `python setup.py install` should also work.
 ## Requirements
 
 A `requirements.txt` file is provided for ease of development.
-For developing tests, a separate `tests/requirements.txt` is provided.
+For developing tests, an additional `tests/requirements.txt` is provided.
+
+Under Windows, install `libusb` or `libusb-win32` using
+(zadig)[http://zadig.akeo.ie].
 
 ## Tests
 

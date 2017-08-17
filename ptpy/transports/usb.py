@@ -435,6 +435,14 @@ class USBTransport(object):
         ptp['Payload'] = data
         self.__send(ptp)
 
+    @property
+    def _dev(self):
+        return None if self.__event_shutdown.is_set() else self.__dev
+
+    @_dev.setter
+    def _dev(self, value):
+        raise ValueError('Read-only property')
+
     # Actual implementation
     # ---------------------
     def send(self, ptp_container, data):

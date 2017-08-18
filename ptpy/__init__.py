@@ -4,10 +4,9 @@ from .extensions.canon import Canon
 from .extensions.microsoft import Microsoft
 from .extensions.parrot import Parrot
 from .extensions.nikon import Nikon
-from .ptp import PTPError
-from .ptp import PTP
-from .transports.usb import USBTransport as usb
-from .transports.ip import IPTransport as ip
+from .ptp import PTP, PTPError
+from .transports.usb import USBTransport as USB
+from .transports.ip import IPTransport as IP
 
 import os
 import sys
@@ -34,10 +33,18 @@ logger.addHandler(handler)
 if 'PTPY_DEBUG_LOG' in os.environ:
     logger.addHandler(logging.FileHandler(os.environ['PTPY_DEBUG_LOG']))
 
-
-class PTPyError(Exception):
-    pass
-
+__all__ = (
+    # Extensions
+    'Canon',
+    'Microsoft',
+    'Nikon',
+    # Transports
+    'IP',
+    'USB',
+    # Classes and errors
+    'PTPError',
+    'PTPy',
+)
 
 # As extensions are implemented, they should be added here, so they are
 # automatically used. The names here need to match those in ptp.py
@@ -83,7 +90,7 @@ class PTPy(object):
         if transport is None:
             logger.debug('Determining available transports')
             # TODO: Implement discovery across transports once PTPIP is added.
-            transport = usb
+            transport = USB
 
         # Determine extension
         if extension is None and not raw:
@@ -124,6 +131,3 @@ class PTPy(object):
     def __init__(self, *args, **kwargs):
         logger.debug('Init PTPy')
         super(PTPy, self).__init__(*args, **kwargs)
-
-
-__all__ = (PTPy, PTPyError)

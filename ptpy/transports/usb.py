@@ -145,6 +145,7 @@ class USBTransport(object):
             except Exception as e:
                 logger.debug('failed to claim PTP device: {}'.format(e))
                 continue
+            self.__dev.reset()
             break
         else:
             message = (

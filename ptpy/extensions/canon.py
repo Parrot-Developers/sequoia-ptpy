@@ -193,7 +193,7 @@ class Canon(object):
             EOSRemoteReleaseOff=0x9129,
             EOSInitiateViewfinder=0x9151,
             EOSTerminateViewfinder=0x9152,
-            EOSGetViewFinderData=0x9153,
+            EOSGetViewFinderImage=0x9153,
             EOSDoAf=0x9154,
             EOSDriveLens=0x9155,
             EOSDepthOfFieldPreview=0x9156,
@@ -205,6 +205,14 @@ class Canon(object):
             EOSFAPIMessageTX=0x91FE,
             EOSFAPIMessageRX=0x91FF,
             **product_operations
+        )
+
+    def _ObjectFormatCode(self, **product_object_formats):
+        return super(Canon, self)._ObjectFormatCode(
+            CRW=0xB101,
+            CRW3=0xB103,
+            MOV=0xB104,
+            **product_object_formats
         )
 
     def _ResponseCode(self, **product_responses):
@@ -508,6 +516,22 @@ class Canon(object):
             ))
         )
 
+    def _EOSDeviceInfo(self):
+        return Struct(
+            'EventsSupported' / PrefixedArray(
+                self._UInt32,
+                self._EOSEventCode
+            ),
+            'DevicePropertiesSupported' / PrefixedArray(
+                self._UInt32,
+                self._EOSPropertyCode
+            ),
+            'TODO' / PrefixedArray(
+                self._UInt32,
+                self._UInt32
+            ),
+        )
+
     # TODO: Decode Canon specific events and properties.
     def _set_endian(self, endian):
         logger.debug('Set Canon endianness')
@@ -519,7 +543,18 @@ class Canon(object):
 
     # TODO: implement GetObjectSize
     # TODO: implement SetObjectArchive
-    # TODO: implement KeepDeviceOn
+
+    def keep_device_on(self):
+        '''Ping non EOS camera so it stays ON'''
+        ptp = Container(
+            OperationCode='KeepDeviceOn',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[]
+        )
+        response = self.mesg(ptp)
+        return response
+
     # TODO: implement LockDeviceUI
     # TODO: implement UnlockDeviceUI
     # TODO: implement GetObjectHandleByName
@@ -575,6 +610,18 @@ class Canon(object):
     # TODO: implement EOSFormatStore
     # TODO: implement EOSGetPartialObject
     # TODO: implement EOSGetDeviceInfoEx
+
+    def eos_get_device_info(self):
+        '''Get EOS camera device information'''
+        ptp = Container(
+            OperationCode='EOSGetDeviceInfoEx',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[0x00100000]
+        )
+        response = self.recv(ptp)
+        return self._parse_if_data(response, self._EOSDeviceInfo)
+
     # TODO: implement EOSGetObjectInfoEx
     # TODO: implement EOSGetThumbEx
     # TODO: implement EOSSendPartialObject
@@ -637,10 +684,20 @@ class Canon(object):
         response = self.recv(ptp)
         return self._parse_if_data(response, self._EOSEventRecords)
 
-    # TODO: implement EOSTransferComplete
+    def eos_transfer_complete(self, handle):
+        '''Terminate a transfer for EOS Cameras'''
+        ptp = Container(
+            OperationCode='EOSTransferComplete',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[handle]
+        )
+        response = self.mesg(ptp)
+        return response
+
     # TODO: implement EOSCancelTransfer
     # TODO: implement EOSResetTransfer
-    # TODO: implement EOSPCHDDCapacity
+
     def eos_pc_hdd_capacity(self, todo0=0xfffffff8, todo1=0x1000, todo2=0x1):
         '''Tell EOS camera about PC hard drive capacity'''
         # TODO: Figure out what to send exactly.
@@ -675,7 +732,17 @@ class Canon(object):
         response = self.mesg(ptp)
         return response
 
-    # TODO: implement EOSKeepDeviceOn
+    def eos_keep_device_on(self):
+        '''Ping EOS camera so it stays ON'''
+        ptp = Container(
+            OperationCode='EOSKeepDeviceOn',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[]
+        )
+        response = self.mesg(ptp)
+        return response
+
     # TODO: implement EOSSetNullPacketMode
     # TODO: implement EOSUpdateFirmware
     # TODO: implement EOSTransferCompleteDT
@@ -707,61 +774,102 @@ class Canon(object):
         response = self.mesg(ptp)
         return response
 
-    # TODO: implement EOSRequestDevicePropValue
+    def eos_request_device_prop_value(self, device_property):
+        '''End bulb capture on EOS cameras'''
+        ptp = Container(
+            OperationCode='EOSRequestDevicePropValue',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[device_property]
+        )
+        response = self.mesg(ptp)
+        return response
 
-    def eos_remote_release_on(self, full=False):
+    def eos_remote_release_on(self, full=False, m=False, x=0):
         '''
         Remote control shutter press for EOS cameras
 
         This is the equivalent of pressing the shutter button: all the way in
         if `full` or half-way otherwise.
+
+        For Canon EOS M, there is only full press with a special argument.
         '''
         ptp = Container(
             OperationCode='EOSRemoteReleaseOn',
             SessionID=self._session,
             TransactionID=self._transaction,
-            Parameter=[0x2 if full else 0x1]
+            # TODO: figure out what x means.
+            Parameter=[0x3 if m else (0x2 if full else 0x1), x]
         )
         response = self.mesg(ptp)
         return response
 
-    def eos_remote_release_off(self, full=False):
+    def eos_remote_release_off(self, full=False, m=False):
         '''
         Remote control shutter release for EOS cameras
 
         This is the equivalent of releasing the shutter button: from all the
         way in if `full` or from half-way otherwise.
+
+        For Canon EOS M, there is only full press with a special argument.
         '''
         ptp = Container(
             OperationCode='EOSRemoteReleaseOff',
             SessionID=self._session,
             TransactionID=self._transaction,
-            Parameter=[0x2 if full else 0x1]
+            Parameter=[0x3 if m else (0x2 if full else 0x1)]
         )
         response = self.mesg(ptp)
         return response
 
     # TODO: implement EOSInitiateViewfinder
     # TODO: implement EOSTerminateViewfinder
-    # TODO: implement EOSGetViewFinderData
-    # TODO: implement EOSDoAf
+    # TODO: implement EOSGetViewFinderImage
 
-    def eos_drive_lens(self, infinity=True, steps=1):
+    def eos_get_viewfinder_image(self):
+        '''Get viefinder image for EOS cameras'''
+        ptp = Container(
+            OperationCode='EOSGetViewFinderImage',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            # TODO: Find out what this parameter does.
+            Parameter=[0x00100000]
+        )
+        return self.recv(ptp)
+
+    def eos_do_af(self):
+        '''Perform auto-focus with AF lenses set to AF'''
+
+        ptp = Container(
+            OperationCode='EOSDoAf',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[]
+        )
+        response = self.mesg(ptp)
+        return response
+
+    def eos_drive_lens(self, infinity=True, step=2):
         '''
         Drive lens focus on EOS cameras with an auto-focus lens on.
 
+        `step` lies in the interval [-3, 3]. Its sign reverses the infinity
+        argument. If `infinity` is `True`, the focal plane is driven away from
+        the camera with the given step.
 
-        If `infinity` is `True`, the focal plane is driven away from the camera
-        the given number of steps.
+        The magnitude of `step` is qualitatively `1` for "fine", `2` for
+        "normal" and `3` for "coarse".
         '''
 
-        # TODO: Check these assumptions.
-        if steps >= 0x8000:
-            steps = 0x8000 - 1
-        if steps < 0x0000:
-            steps = 0
+        if step not in range(-3, 4):
+            raise ValueError(
+                'The step must be within [-3, 3].'
+            )
+
+        infinity = not infinity if step < 0 else infinity
+        step = -step if step < 0 else step
         instruction = 0x8000 if infinity else 0x0000
-        instruction |= steps
+        instruction |= step
 
         ptp = Container(
             OperationCode='EOSDriveLens',
@@ -777,7 +885,19 @@ class Canon(object):
     # TODO: implement EOSZoom
     # TODO: implement EOSZoomPosition
     # TODO: implement EOSSetLiveAfFrame
-    # TODO: implement EOSAfCancel
+
+    def eos_af_cancel(self):
+        '''Stop driving AF on EOS cameras.'''
+
+        ptp = Container(
+            OperationCode='EOSAfCancel',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[]
+        )
+        response = self.mesg(ptp)
+        return response
+
     # TODO: implement EOSFAPIMessageTX
     # TODO: implement EOSFAPIMessageRX
 

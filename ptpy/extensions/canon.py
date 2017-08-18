@@ -808,5 +808,5 @@ class Canon(object):
                         self.__event_queue.put(evt)
             except Exception as e:
                 logger.error(e)
-            sleep(3)
+            sleep(0.2)
         self.__eos_event_shutdown.clear()

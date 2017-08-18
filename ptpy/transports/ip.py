@@ -652,7 +652,13 @@ class IPTransport(object):
                 self.__implicit_session_open.is_set() and
                 _main_thread_alive()
         ):
-            evt = self.__recv(event=True, wait=False, raw=True)
+            try:
+                evt = self.__recv(event=True, wait=False, raw=True)
+            except OSError as e:
+                if e.errno == 9 and not self.__implicit_session_open.is_set():
+                    break
+                else:
+                    raise e
             if evt is not None:
                 logger.debug('Event queued')
                 self.__event_queue.put(evt)

@@ -33,6 +33,7 @@ def actual_socket(sock_object):
     """Get the actual object with sendall and shutdown methods"""
     return sock_object._sock if hasattr(sock_object, '_sock') else sock_object
 
+
 def create_connection(address):
     """Connect to address and return the socket object. """
 
@@ -446,7 +447,11 @@ class IPTransport(object):
         '''Helper method for receiving packets.'''
         hdrlen = self.__Header.sizeof()
         with self.__implicit_session():
-            ip = actual_socket(self.__evtcon) if event else actual_socket(self.__cmdcon)
+            ip = (
+                actual_socket(self.__evtcon)
+                if event
+                else actual_socket(self.__cmdcon)
+            )
             data = bytes()
             while True:
                 try:

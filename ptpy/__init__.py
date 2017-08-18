@@ -80,6 +80,16 @@ def ptpy_factory(transport, extension=None):
     return type('PTPy', inheritance, {})
 
 
+def choose_extension(device_info):
+
+    if 'Canon' in device_info.Manufacturer:
+        return Canon
+    elif 'Nikon' in device_info.Manufacturer:
+        return Nikon
+    else:
+        return known_extensions[device_info.VendorExtensionID]
+
+
 class PTPy(object):
     '''Class for all transports, extensions and basic PTP functionality'''
     def __new__(cls, device=None, extension=None, transport=None,
@@ -104,9 +114,7 @@ class PTPy(object):
                 device_info = plain_camera.get_device_info()
                 plain_camera._shutdown()
                 try:
-                    # TODO: Check vendor and product for non-compliant
-                    # cameras.
-                    extension = known_extensions[device_info.VendorExtensionID]
+                    extension = choose_extension(device_info)
                 except KeyError:
                     pass
 

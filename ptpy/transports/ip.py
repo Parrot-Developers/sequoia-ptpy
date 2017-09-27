@@ -13,6 +13,7 @@ from construct import (
 )
 from six.moves.queue import Queue
 import six
+import sys
 import socket
 import logging
 from contextlib import contextmanager
@@ -45,7 +46,8 @@ def create_connection(address):
         try:
             sock = socket.socket(af, socktype, proto)
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
+            if not 'darwin' in sys.platform():
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
             sock.setsockopt(socket.IPPROTO_TCP, socket.SO_KEEPALIVE, 1)
             sock.connect(sa)
             return sock

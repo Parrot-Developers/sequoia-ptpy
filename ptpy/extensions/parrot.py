@@ -93,10 +93,14 @@ class Parrot(object):
         return ExprAdapter(
             self._PTPArray(self._UInt32),
             encoder=lambda obj, ctx: [
-                obj.Green, obj.Red, obj.RedEdge, obj.NIR,
+                obj.Green[0], obj.Red[0], obj.RedEdge[0], obj.NIR[0],
+                obj.Green[1], obj.Red[1], obj.RedEdge[1], obj.NIR[1],
             ],
             decoder=lambda obj, ctx: Container(
-                Green=obj[0], Red=obj[1], RedEdge=obj[2], NIR=obj[3],
+                Green=(obj[0], obj[4]),
+                Red=(obj[1], obj[5]),
+                RedEdge=(obj[2], obj[6]),
+                NIR=(obj[3], obj[7]),
             ),
         )
 

@@ -332,9 +332,7 @@ class USBTransport(object):
                     )
                 try:
                     usbdata += ep.read(
-                        ep.wMaxPacketSize,
-                        # Only wait from the second try or if requested.
-                        timeout=1000 if tries > 0 else (0 if wait else None)
+                        ep.wMaxPacketSize
                     )
                 except usb.core.USBError as e:
                     # Return None on timeout or busy for events
@@ -382,8 +380,7 @@ class USBTransport(object):
                 )
             while len(usbdata) < header.Length:
                 usbdata += ep.read(
-                    header.Length - len(usbdata),
-                    timeout=5000
+                    header.Length - len(usbdata)
                 )
         if raw:
             return usbdata
@@ -397,7 +394,7 @@ class USBTransport(object):
         transaction = self.__CommandTransaction.build(ptp_container)
         with lock:
             try:
-                ep.write(transaction, timeout=1)
+                ep.write(transaction)
             except usb.core.USBError as e:
                 # Ignore timeout or busy device once.
                 if (
@@ -406,7 +403,7 @@ class USBTransport(object):
                           'busy' in e.strerror)) or
                         (e.errno == 110 or e.errno == 16 or e.errno == 5)
                 ):
-                    ep.write(transaction, timeout=5000)
+                    ep.write(transaction)
 
     def __send_request(self, ptp_container):
         '''Send PTP request without checking answer.'''
@@ -558,9 +555,8 @@ class USBTransport(object):
         '''
         evt = None
         usbdata = None
-        timeout = None if wait else 0.001
         if not self.__event_queue.empty():
-            usbdata = self.__event_queue.get(block=not wait, timeout=timeout)
+            usbdata = self.__event_queue.get(block=not wait)
         if usbdata is not None:
             evt = self.__parse_response(usbdata)
 

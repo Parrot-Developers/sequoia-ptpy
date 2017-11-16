@@ -46,7 +46,7 @@ def create_connection(address):
         try:
             sock = socket.socket(af, socktype, proto)
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            if not 'darwin' in sys.platform():
+            if 'darwin' not in sys.platform:
                 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
             sock.setsockopt(socket.IPPROTO_TCP, socket.SO_KEEPALIVE, 1)
             sock.connect(sa)

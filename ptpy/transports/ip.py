@@ -53,9 +53,15 @@ def create_connection(address):
             return sock
 
         except socket.error as _:
+            logger.error('socket.error: skipping address')
             err = _
             if sock is not None:
                 sock.close()
+        except Exception as e:
+            logger.error(e)
+            raise e
+    else:
+        raise PTPError('Impossible to connect to device')
 
     if err is not None:
         raise err
@@ -105,6 +111,9 @@ class IPTransport(object):
                 self.__open_implicit_session()
                 self.__check_session_lock.release()
                 yield
+            except Exception as e:
+                logger.error(e)
+                raise PTPError('Failed to open PTP/IP implicit session')
             finally:
                 if self.__implicit_session_open.is_set():
                     self.__close_implicit_session()

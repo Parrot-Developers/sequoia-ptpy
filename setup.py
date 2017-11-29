@@ -51,5 +51,5 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=test_requirements,
     url='https://github.com/Parrot-Developers/sequoia-ptpy',
-    version='0.3.0',
+    version='0.3.1',
 )

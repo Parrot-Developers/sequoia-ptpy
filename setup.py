@@ -7,6 +7,7 @@ def read(filename):
     with open(os.path.join(os.path.dirname(__file__), filename)) as f:
         return f.read()
 
+
 install_requirements = [
     str(r.req)
     for r in parse_requirements('requirements.txt', session=False)
@@ -51,5 +52,5 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=test_requirements,
     url='https://github.com/Parrot-Developers/sequoia-ptpy',
-    version='0.3.1',
+    version='0.3.2',
 )

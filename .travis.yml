@@ -1,0 +1,22 @@
+language: python
+python:
+  - '2.7'
+  - '3.5'
+  - '3.6'
+script:
+  pip install .
+deploy:
+  - provider: pypi
+    distributions: "sdist bdist_wheel"
+    user: domenzain
+    password:
+      secure: "Zxf2Vndax38OcMIDoduPQrtJDRDHWueSGWBnoIJWJOjDBTC1LdMmHcD13CanyeXNxE7TBdjx562rbCfisZUlJDGjt0eHpkpbhM9KqRGQiwYTqLrK7Xtoaq39PsEeyCNou5VaV62AvsRprJ1t/0FiVj+bky9ODfSWqCMn5NKhg61VXW9p5RHy7D1ZumvkLn2gwdtu1CQLg9qh4enEpmGTox3p+4nvGA0BpDON6lD8AgHdIu4HbGK+7J0bpCAKf6FxFY8rFUw8+0gMRFxufrpVkjy3HacIfv/fumSnz/uiayiMDEl54A9Ghly8U5MHNqXWXqTUr7s7OllPuv5v5ruXGDr99kjiA3b5DQtRbVugaRQeP+P39C6xbinfBkE4n7ICKHHhHXg68shVbar6cR3owI/xKryQ1gX7WupLKH2BD6nvCbSlfUaaW3/Ng9LZIlUFS2tQklAHAhEI+tSPSfwVZ1SPI18ME5Cz7Nd+yNyMbSQ7Zz0adH4QR2ppTj02od/xRy/kE+7nghEWdLgZF5ap9FQRoHRLeYckH2MNQJkE87Y3juyGSI44WbXXP8Ch4HV7ldz0ImDeuGRLLLjKyHtUH+4dtArdAk3FfpGl0+oDVSDVvsLBEihwc+Gb0VhYg0f9tcZUXZuGebPiolWLfktzWzPvesoiFdqB7Ls7rX/zVuo="
+    on:
+      repo: Parrot-Developers/sequoia-ptpy
+      tags: true
+  - provider: releases
+    api_key:
+      secure: "nunXrhwaPqjLBzM4pHcIQ91BPCEWiHMaY2qx3KnyfAT6/53aaYUONFuoqs3By0PxFaN+2cN1YjvhI/UjlQ4S9yr3Mtb8S8JPmHTf58hcyerzTwao2KT8H9jYAD2gOr5ds1R65RIQe8xMNj2sBWM8dEAV13EzwMlY+qkZ6o7x0ifHz6t9Dsmt6Dr49GkeFncv3CQiX/QEUMNE3O/98ZGMpa4H+Rpno58QgqCSLu0Wv8EKvctw08Js8j+ig5e43tVuLGud0Dpua6rG0KxUBLKQiPNDvJn6jNsKxuGCqKa1CcenzNqLgEVlg/VUaWpNCi0BPzdtOObKO1iBcXn0jMEDYzpdPRzPXA8TmQfPYIk6Ca5tXNO7IBiY+oFOre4RRroyrOfM5qOMIn7lqgkZPMvf462QDyJPKB/wtKzFFfozd4GyRevI8JClCK3+cqKeYazomj5PFiMMEvN8xxSP/lU5xkvkAIinfPh5JXpMB5NQUN23j9SUla56daBeq/OCVNc6uum6ubM0m3o8+imZL2pggu2NdM/ZlU6p/eSydkZCtvADiduBbeVtN7XcjV0BMkoTajGaNo7YKGR4FV1M493wmQpaGx0JAS0GmKys59XRd+eA5m1IDXVE791EwOdzGMCYmKApjMlhSo85PX7TJxztbTGtub8tx0/+RJUMKv9l6Ws="
+    on:
+      repo: Parrot-Developers/sequoia-ptpy
+      tags: true

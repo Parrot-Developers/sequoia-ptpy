@@ -9,6 +9,8 @@ serial or IP layers to communicate with PTP compliant cameras.
 The entire codebase, tools and examples are compatible with both Python 3 and
 Python 2.
 
+[![Build Status](https://travis-ci.org/Parrot-Developers/sequoia-ptpy.svg?branch=master)](https://travis-ci.org/Parrot-Developers/sequoia-ptpy)
+
 # Basic Usage
 
 PTPy accomodates both the low-level developers wishing to test their PTP

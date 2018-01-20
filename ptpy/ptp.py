@@ -1165,6 +1165,23 @@ class PTP(object):
         response = self.recv(ptp)
         return self._parse_if_data(response, self._ObjectInfo)
 
+    def send_object_info(self, objectinfo):
+        '''Send ObjectInfo to responder.
+
+        The object should correspond to the latest SendObjectInfo interaction
+        between Initiator and Responder.
+        '''
+        objectinfo = self._build_if_not_data(objectinfo, self._ObjectInfo)
+
+        ptp = Container(
+            OperationCode='SendObjectInfo',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[]
+        )
+
+        return self.send(ptp, objectinfo)
+
     def send_object(self, bytes_data):
         '''Send object to responder.
 

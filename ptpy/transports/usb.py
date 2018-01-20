@@ -164,7 +164,10 @@ class USBTransport(object):
             self.__event_proc.join(2)
 
         logger.debug('Release {}'.format(repr(self.__dev)))
-        usb.util.release_interface(self.__dev, self.__intf)
+        try:
+            usb.util.release_interface(self.__dev, self.__intf)
+        except Exception as e:
+            logger.warn(e)
 
     # Helper methods.
     # ---------------------

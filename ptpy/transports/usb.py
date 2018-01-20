@@ -88,7 +88,7 @@ class USBTransport(object):
             [device] if (device is not None)
             else find_usb_cameras(name=name)
         )
-
+        self.__claimed = False
         self.__acquire_camera(devs)
 
         self.__event_queue = Queue()
@@ -142,8 +142,9 @@ class USBTransport(object):
             try:
                 logger.debug('Claiming {}'.format(repr(self.__dev)))
                 usb.util.claim_interface(self.__dev, self.__intf)
+                self.__claimed = True
             except Exception as e:
-                logger.debug('failed to claim PTP device: {}'.format(e))
+                logger.warn('Failed to claim PTP device: {}'.format(e))
                 continue
             self.__dev.reset()
             break
@@ -163,9 +164,10 @@ class USBTransport(object):
         if self.__event_proc.is_alive():
             self.__event_proc.join(2)
 
-        logger.debug('Release {}'.format(repr(self.__dev)))
         try:
-            usb.util.release_interface(self.__dev, self.__intf)
+            if self.__claimed:
+                logger.debug('Release {}'.format(repr(self.__dev)))
+                usb.util.release_interface(self.__dev, self.__intf)
         except Exception as e:
             logger.warn(e)
 

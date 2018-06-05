@@ -560,8 +560,11 @@ class USBTransport(object):
         '''
         evt = None
         usbdata = None
-        if not self.__event_queue.empty():
-            usbdata = self.__event_queue.get(block=not wait)
+        if wait:
+            usbdata = self.__event_queue.get(block=True)
+        elif not self.__event_queue.empty():
+            usbdata = self.__event_queue.get(block=False)
+
         if usbdata is not None:
             evt = self.__parse_response(usbdata)
 

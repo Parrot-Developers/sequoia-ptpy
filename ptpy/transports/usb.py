@@ -385,7 +385,11 @@ class USBTransport(object):
                 )
             while len(usbdata) < header.Length:
                 usbdata += ep.read(
-                    header.Length - len(usbdata)
+                    min(
+                        header.Length - len(usbdata),
+                        # Up to 64kB
+                        64 * 2**10
+                    )
                 )
         if raw:
             return usbdata

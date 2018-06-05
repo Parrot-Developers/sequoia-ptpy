@@ -155,7 +155,7 @@ class Sony(object):
         return self.recv(ptp)
 
     def sdio_get_ext_device_info(self):
-        '''Change Sony camera mode'''
+        '''Sony DeviceInfo'''
         ptp = Container(
             OperationCode='SDIOGetExtDeviceInfo',
             SessionID=self._session,

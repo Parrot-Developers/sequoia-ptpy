@@ -4,7 +4,7 @@ Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
 from contextlib import contextmanager
-from construct import Container, Struct, Range
+from construct import Container, Struct, Range, Computed
 import logging
 logger = logging.getLogger(__name__)
 
@@ -97,23 +97,37 @@ class Sony(object):
 
     def _SonyDeviceInfo(self):
         # TODO: Verify how many arrays we can get.
-        return Range(0, 3, self._PTPArray(self._UInt16))
+        return Range(0, 2, self._PTPArray(self._UInt16))
 
     def _SonyPropDesc(self):
         return Struct(
             'PropertyCode' / self._PropertyCode,
             'DataTypeCode' / self._DataTypeCode,
             'GetSet' / self._GetSet,
-            'Sony1' / self._UInt8,
-            'Value' / self._DataType,
+            # 'FormFlag' / Computed('NoForm'),
             'FactoryDefaultValue' / self._DataType,
             'CurrentValue' / self._DataType,
+            'FormFlag' / self._UInt8,
+            'Form' / self._Form(self._DataType)
+
+            # 'PropertyCode' / self._PropertyCode,
+            # 'DataTypeCode' / self._DataTypeCode,
+            # 'GetSet' / self._GetSet,
+            # 'FactoryDefaultValue' / self._DataType,
+            # 'CurrentValue' / self._DataType,
+            # 'FormFlag' / self._FormFlag,
+            # 'Form' / self._Form(self._DataType)
         )
+
+    def _SonyAllPropDesc(self):
+        return self._PTPArray(self._SonyPropDesc)
 
     def _set_endian(self, endian):
         logger.debug('Set Sony endianness')
         super(Sony, self)._set_endian(endian)
         self._SonyPropDesc = self._SonyPropDesc()
+        self._SonyDeviceInfo = self._SonyDeviceInfo()
+        self._SonyAllPropDesc = self._SonyAllPropDesc()
 
     def event(self, wait=False):
         '''Check Sony or PTP events
@@ -135,7 +149,16 @@ class Sony(object):
                     self.sdio_connect(1)
                     self.sdio_connect(2)
                     sdi = self.sdio_get_ext_device_info()
-                    logger.debug(self._SonyDeviceInfo.parse(sdi.Data[2:]))
+                    if not sdi.Data:
+                        logger.debug(sdi)
+                        logger.error('No Sony properties')
+                        sdi = self.sdio_get_ext_device_info()
+                    props = self._SonyDeviceInfo.parse(sdi.Data[2:])
+                    logger.debug(props[0])
+                    logger.debug(props[1])
+                    spd = self.get_all_device_prop_data()
+                    for e in spd:
+                        logger.debug(e)
                     # TODO: finish Sony property integration
 
         except Exception as e:
@@ -160,6 +183,16 @@ class Sony(object):
             OperationCode='SDIOGetExtDeviceInfo',
             SessionID=self._session,
             TransactionID=self._transaction,
-            Parameter=[0xFF]  # TODO: Meaning??
+            Parameter=[0xFFFFFFFF]  # TODO: Meaning??
         )
         return self.recv(ptp)
+
+    def get_all_device_prop_data(self):
+        ptp = Container(
+            OperationCode='GetAllDevicePropData',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[]  # TODO: Meaning??
+        )
+        response = self.recv(ptp)
+        return self._parse_if_data(response, self._SonyAllPropDesc)

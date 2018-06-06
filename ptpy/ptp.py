@@ -866,6 +866,14 @@ class PTP(object):
 
         self.__has_the_knowledge = True
 
+    def _update_the_knowledge(self, props=None):
+        '''Update an internal representation of device behaviour.'''
+        logger.debug('Gathering info about extra device properties')
+        with self.session():
+            for p in props:
+                self.__prop_desc[p] = self.get_device_prop_desc()
+                self.__device_info.DevicePropertiesSupported.append(p)
+
     def open_session(self):
         self._session += 1
         self._transaction = 1

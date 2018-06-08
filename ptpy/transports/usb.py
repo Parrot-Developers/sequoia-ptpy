@@ -403,7 +403,12 @@ class USBTransport(object):
         transaction = self.__CommandTransaction.build(ptp_container)
         with lock:
             try:
-                ep.write(transaction)
+                sent = 0
+                while sent < len(transaction):
+                    sent = ep.write(
+                        # Up to 64kB
+                        transaction[sent:(sent + 64*2**10)]
+                    )
             except usb.core.USBError as e:
                 # Ignore timeout or busy device once.
                 if (

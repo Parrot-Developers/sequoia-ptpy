@@ -350,7 +350,7 @@ class USBTransport(object):
                         if event:
                             return None
                         else:
-                            logger.debug('Ignored exception: {}'.format(e))
+                            logger.warning('Ignored exception: {}'.format(e))
                     else:
                         logger.error(e)
                         raise e
@@ -412,6 +412,7 @@ class USBTransport(object):
                           'busy' in e.strerror)) or
                         (e.errno == 110 or e.errno == 16 or e.errno == 5)
                 ):
+                    logger.warning('Ignored USBError {}'.format(e.errno))
                     ep.write(transaction)
 
     def __send_request(self, ptp_container):

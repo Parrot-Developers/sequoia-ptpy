@@ -5,10 +5,15 @@ extension. This is why inheritance is not explicit.
 '''
 from contextlib import contextmanager
 from construct import Container, Struct, Range, Computed, Enum, Array, PrefixedArray
+from ..ptp import PTPError
 import logging
 logger = logging.getLogger(__name__)
 
 __all__ = ('Sony',)
+
+
+class SonyError(PTPError):
+    pass
 
 
 class Sony(object):

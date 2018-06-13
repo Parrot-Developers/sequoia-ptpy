@@ -4,7 +4,7 @@ Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
 from contextlib import contextmanager
-from construct import Container, Struct, Range, Computed
+from construct import Container, Struct, Range, Computed, Enum, Array, PrefixedArray
 import logging
 logger = logging.getLogger(__name__)
 
@@ -96,35 +96,38 @@ class Sony(object):
         )
 
     def _SonyDeviceInfo(self):
-        # TODO: Verify how many arrays we can get.
-        return Range(0, 2, self._PTPArray(self._UInt16))
+        return Range(0, 2, self._PTPArray(self._PropertyCode))
+
+    def _Visibility(self):
+        return Enum(
+            self._UInt8,
+            Disabled=0x00,
+            Enabled=0x01,
+            DisplayOnly=0x02,
+        )
 
     def _SonyPropDesc(self):
         return Struct(
             'PropertyCode' / self._PropertyCode,
             'DataTypeCode' / self._DataTypeCode,
-            'GetSet' / self._GetSet,
-            # 'FormFlag' / Computed('NoForm'),
+            'SonyGetSet' / self._UInt8,
+            'GetSet' / Computed(
+                lambda x: 'GetSet' if x.SonyGetSet & 0x01 else 'Get'
+            ),
+            'Visibility' / self._Visibility,
             'FactoryDefaultValue' / self._DataType,
             'CurrentValue' / self._DataType,
-            'FormFlag' / self._UInt8,
+            'FormFlag' / self._FormFlag,
             'Form' / self._Form(self._DataType)
-
-            # 'PropertyCode' / self._PropertyCode,
-            # 'DataTypeCode' / self._DataTypeCode,
-            # 'GetSet' / self._GetSet,
-            # 'FactoryDefaultValue' / self._DataType,
-            # 'CurrentValue' / self._DataType,
-            # 'FormFlag' / self._FormFlag,
-            # 'Form' / self._Form(self._DataType)
         )
 
     def _SonyAllPropDesc(self):
-        return self._PTPArray(self._SonyPropDesc)
+        return PrefixedArray(self._UInt64, self._SonyPropDesc)
 
     def _set_endian(self, endian):
         logger.debug('Set Sony endianness')
         super(Sony, self)._set_endian(endian)
+        self._Visibility = self._Visibility()
         self._SonyPropDesc = self._SonyPropDesc()
         self._SonyDeviceInfo = self._SonyDeviceInfo()
         self._SonyAllPropDesc = self._SonyAllPropDesc()

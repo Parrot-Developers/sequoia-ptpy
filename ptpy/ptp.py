@@ -828,7 +828,7 @@ class PTP(object):
         return (constructor.build(data)
                 if isinstance(data, Container) else data)
 
-    def __name(self, name_or_code, constructor):
+    def _name(self, name_or_code, constructor):
         '''Helper method to get the code for an Enum constructor.'''
         name = name_or_code
         if isinstance(name_or_code, int):
@@ -839,7 +839,7 @@ class PTP(object):
 
         return name
 
-    def __code(self, name_or_code, constructor):
+    def _code(self, name_or_code, constructor):
         '''Helper method to get the code for an Enum constructor.'''
         if isinstance(name_or_code, six.string_types):
             try:
@@ -995,7 +995,7 @@ class PTP(object):
             raise ValueError(
                 'Cannot get both root and {}'.format(object_handle)
             )
-        code = self.__code(object_format, self._ObjectFormatCode)
+        code = self._code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='GetNumObjects',
             SessionID=self._session,
@@ -1023,7 +1023,7 @@ class PTP(object):
             raise ValueError(
                 'Cannot get both root and {}'.format(object_handle)
             )
-        code = self.__code(object_format, self._ObjectFormatCode)
+        code = self._code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='GetObjectHandles',
             SessionID=self._session,
@@ -1055,7 +1055,7 @@ class PTP(object):
 
         Accepts a property name or a number.
         '''
-        code = self.__code(device_property, self._PropertyCode)
+        code = self._code(device_property, self._PropertyCode)
 
         ptp = Container(
             OperationCode='GetDevicePropDesc',
@@ -1067,7 +1067,7 @@ class PTP(object):
         result = self._parse_if_data(response, self._DevicePropDesc)
         # Update the knowledge on response.
         if self.__has_the_knowledge and hasattr(response, 'Data'):
-            device_property = self.__name(device_property, self._PropertyCode)
+            device_property = self._name(device_property, self._PropertyCode)
             logger.debug(
                 'Updating knowledge of {}'
                 .format(
@@ -1079,7 +1079,7 @@ class PTP(object):
         return result
 
     def get_device_prop_value(self, device_property):
-        code = self.__code(device_property, self._PropertyCode)
+        code = self._code(device_property, self._PropertyCode)
 
         ptp = Container(
             OperationCode='GetDevicePropValue',
@@ -1089,17 +1089,17 @@ class PTP(object):
         )
         response = self.recv(ptp)
         if self.__has_the_knowledge and hasattr(response, 'Data'):
-            device_property = self.__name(device_property, self._PropertyCode)
+            device_property = self._name(device_property, self._PropertyCode)
             c = self.__constructor(device_property)
             response = c.parse(response.Data).Value
         return response
 
     def set_device_prop_value(self, device_property, value_payload):
-        code = self.__code(device_property, self._PropertyCode)
+        code = self._code(device_property, self._PropertyCode)
 
         # Attempt to use current knowledge of properties
         if self.__has_the_knowledge:
-            device_property = self.__name(device_property, self._PropertyCode)
+            device_property = self._name(device_property, self._PropertyCode)
             c = self.__constructor(device_property)
             value_payload = c.build(
                 Container(
@@ -1121,7 +1121,7 @@ class PTP(object):
 
     def initiate_capture(self, storage_id=0, object_format=0):
         '''Initiate capture with current camera settings.'''
-        code = self.__code(object_format, self._ObjectFormatCode)
+        code = self._code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='InitiateCapture',
             SessionID=self._session,
@@ -1136,7 +1136,7 @@ class PTP(object):
 
     def initiate_open_capture(self, storage_id=0, object_format=0):
         '''Initiate open capture in `storage_id` of type `object_format`.'''
-        code = self.__code(object_format, self._ObjectFormatCode)
+        code = self._code(object_format, self._ObjectFormatCode)
         ptp = Container(
             OperationCode='InitiateOpenCapture',
             SessionID=self._session,
@@ -1252,7 +1252,7 @@ class PTP(object):
 
         Optionally delete all objects or all images.
         '''
-        code = self.__code(object_format, self._ObjectFormatCode)
+        code = self._code(object_format, self._ObjectFormatCode)
 
         # Do the most destruction:
         if delete_all and delete_all_images:
@@ -1363,7 +1363,7 @@ class PTP(object):
     def get_vendor_device_info(self, extension):
         '''Get VendorExtension maps when supporting more than one extension.
         '''
-        code = self.__code(extension, self._VendorExtensionID)
+        code = self._code(extension, self._VendorExtensionID)
         ptp = Container(
             OperationCode='GetVendorDeviceInfo',
             SessionID=self._session,

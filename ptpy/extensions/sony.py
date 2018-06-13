@@ -21,7 +21,8 @@ class Sony(object):
     def __init__(self, *args, **kwargs):
         logger.debug('Init Sony')
         super(Sony, self).__init__(*args, **kwargs)
-        # TODO: expose the choice to poll or not Sony events
+        # TODO: expose the choice to disable automatic Sony extension
+        self.__raw = False
 
     @contextmanager
     def session(self):
@@ -29,8 +30,23 @@ class Sony(object):
         Manage Sony session with context manager.
         '''
         # When raw device, do not perform
-        logger.debug('Session Sony')
+        if self.__raw:
+            with super(Sony, self).session():
+                yield
+            return
+
         with super(Sony, self).session():
+            logger.debug('Authentication')
+            r = []
+            r.append(self.sdio_connect(1))
+            r.append(self.sdio_connect(2))
+            r.append(self.sdio_get_ext_device_info())
+            r.append(self.sdio_connect(3))
+
+            if not all(map(lambda r: r.ResponseCode == 'OK', r)):
+                raise SonyError('Could not authenticate')
+            else:
+                logger.debug('Authentication done')
             yield
 
     def _shutdown(self):
@@ -75,7 +91,6 @@ class Sony(object):
 
     def _ObjectFormatCode(self, **product_object_formats):
         return super(Sony, self)._ObjectFormatCode(
-            SonyFormat1=0xb301,
             RAW=0xb101,
 
             **product_object_formats
@@ -144,36 +159,6 @@ class Sony(object):
         '''
         evt = super(Sony, self).event(wait=wait)
         return evt
-
-    def get_device_info(self):
-        logger.debug('Sony get_device_info')
-        di = super(Sony, self).get_device_info()
-        try:
-            if (
-                    hasattr(di, 'OperationsSupported') and
-                    'SDIOConnect' in di.OperationsSupported
-            ):
-                with self.session():
-                    self.sdio_connect(1)
-                    self.sdio_connect(2)
-                    sdi = self.sdio_get_ext_device_info()
-                    if not sdi.Data:
-                        logger.debug(sdi)
-                        logger.error('No Sony properties')
-                        sdi = self.sdio_get_ext_device_info()
-                    props = self._SonyDeviceInfo.parse(sdi.Data[2:])
-                    logger.debug(props[0])
-                    logger.debug(props[1])
-                    spd = self.get_all_device_prop_data()
-                    for e in spd:
-                        logger.debug(e)
-                    # TODO: finish Sony property integration
-
-        except Exception as e:
-            logger.error(e)
-            pass
-
-        return di
 
     def sdio_connect(self, step, key1=0, key2=0):
         '''Authentication handshake'''

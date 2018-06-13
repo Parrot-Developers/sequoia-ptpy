@@ -144,9 +144,36 @@ class Sony(object):
     def _SonyAllPropDesc(self):
         return PrefixedArray(self._UInt64, self._SonyPropDesc)
 
+    def _ExposureProgramMode(self):
+        return Enum(
+            self._UInt16,
+            IntelligentAuto=0x8000,
+            SuperiorAuto=0x8001,
+            P=0x2,
+            A=0x3,
+            S=0x4,
+            M=0x1,
+            MovieP=0x8050,
+            MovieA=0x8051,
+            MovieS=0x8052,
+            MovieM=0x8053,
+            # Mode=0x8054, # TODO: ??
+            Panoramic=0x8041,
+            Portrait=0x7,
+            SportsAction=0x8011,
+            Macro=0x8015,
+            Landscape=0x8014,
+            Sunset=0x8012,
+            NightScene=0x8013,
+            HandheldTwilight=0x8016,
+            NightPortrait=0x8017,
+            AntiMotionBlur=0x8018,
+        )
+
     def _set_endian(self, endian):
         logger.debug('Set Sony endianness')
         super(Sony, self)._set_endian(endian)
+        self._ExposureProgramMode = self._ExposureProgramMode()
         self._Visibility = self._Visibility()
         self._SonyPropDesc = self._SonyPropDesc()
         self._SonyDeviceInfo = self._SonyDeviceInfo()

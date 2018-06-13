@@ -175,23 +175,23 @@ class Sony(object):
 
         return di
 
-    def sdio_connect(self, mode):
-        '''Change Sony camera mode'''
+    def sdio_connect(self, step, key1=0, key2=0):
+        '''Authentication handshake'''
         ptp = Container(
             OperationCode='SDIOConnect',
             SessionID=self._session,
             TransactionID=self._transaction,
-            Parameter=[mode]
+            Parameter=[step, key1, key2]
         )
         return self.recv(ptp)
 
-    def sdio_get_ext_device_info(self):
+    def sdio_get_ext_device_info(self, version=0xc8):
         '''Sony DeviceInfo'''
         ptp = Container(
             OperationCode='SDIOGetExtDeviceInfo',
             SessionID=self._session,
             TransactionID=self._transaction,
-            Parameter=[0xFFFFFFFF]  # TODO: Meaning??
+            Parameter=[version]
         )
         return self.recv(ptp)
 
@@ -200,7 +200,7 @@ class Sony(object):
             OperationCode='GetAllDevicePropData',
             SessionID=self._session,
             TransactionID=self._transaction,
-            Parameter=[]  # TODO: Meaning??
+            Parameter=[]
         )
         response = self.recv(ptp)
         return self._parse_if_data(response, self._SonyAllPropDesc)

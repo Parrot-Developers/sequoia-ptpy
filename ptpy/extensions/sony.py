@@ -204,3 +204,36 @@ class Sony(object):
         )
         response = self.recv(ptp)
         return self._parse_if_data(response, self._SonyAllPropDesc)
+
+    def set_control_device_A(self, device_property, value_payload):
+        code = self._code(device_property, self._PropertyCode)
+        ptp = Container(
+            OperationCode='SetControlDeviceA',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[code]
+        )
+        response = self.send(ptp, value_payload)
+        return response
+
+    def set_control_device_B(self, device_property, value_payload):
+        code = self._code(device_property, self._PropertyCode)
+        ptp = Container(
+            OperationCode='SetControlDeviceB',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[code]
+        )
+        response = self.send(ptp, value_payload)
+        return response
+
+    def get_control_device_desc(self, device_property):
+        code = self._code(device_property, self._PropertyCode)
+        ptp = Container(
+            OperationCode='GetControlDeviceDesc',
+            SessionID=self._session,
+            TransactionID=self._transaction,
+            Parameter=[code]
+        )
+        response = self.recv(ptp)
+        return response

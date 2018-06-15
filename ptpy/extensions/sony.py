@@ -4,7 +4,7 @@ Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
 from contextlib import contextmanager
-from construct import Container, Struct, Range, Computed, Enum, Array, PrefixedArray
+from construct import Container, Struct, Range, Computed, Enum, Array, PrefixedArray, Pass, ExprAdapter
 from ..ptp import PTPError
 import logging
 logger = logging.getLogger(__name__)
@@ -170,10 +170,87 @@ class Sony(object):
             AntiMotionBlur=0x8018,
         )
 
+    def _PictureEffect(self):
+        return Enum(
+            self._UInt16,
+            default=Pass,
+            Off=0x8000,
+            ToyCameraNormal=0x8001,
+            ToyCameraCool=0x8002,
+            ToyCameraWarm=0x8003,
+            ToyCameraGreen=0x8004,
+            ToyCameraMagenta=0x8005,
+            Pop=0x8010,
+            PosterizationBW=0x8020,
+            PosterizationColor=0x8021,
+            Retro=0x8030,
+            SoftHighKey=0x8030,
+            PartialColorRed=0x8050,
+            PartialColorGreen=0x8051,
+            PartialColorBlue=0x8052,
+            PartialColorYellow=0x8053,
+            HighContrastMono=0x8060,
+            SoftFocusLow=0x8070,
+            SoftFocusMid=0x8071,
+            SoftFocusHigh=0x8072,
+            HDRPaintingLow=0x8080,
+            HDRPaintingMid=0x8081,
+            HDRPaintingHigh=0x8082,
+            RichToneMono=0x8090,
+            MiniatureAuto=0x80a0,
+            MiniatureTop=0x80a1,
+            MiniatureMiddleHorizontal=0x80a2,
+            MiniatureBottom=0x80a3,
+            MiniatureRight=0x80a4,
+            MiniatureMiddleVertical=0x80a5,
+            MiniatureLeft=0x80a6,
+            Watercolor=0x80b0,
+            IllustrationLow=0x80c0,
+            IllustrationMid=0x80c1,
+            IllustrationHigh=0x80c2,
+        )
+
+    def _StillCaptureMode(self):
+        '''DriveMode in Sony terminology'''
+        return Enum(
+            self._UInt16,
+            default=Pass,
+            Single=0x0001,
+            SelfTimer10s=0x8004,
+            SelfTimer2s=0x8005,
+            SelfTimer10sContinuous3Images=0x8008,
+            SelfTimer10sContinuous5Images=0x8009,
+            Continuous=0x8013,
+            ContinuousSpeedPriority=0x8014,
+            WhiteBalanceBracketLow=0x8018,
+            WhiteBalanceBracketHigh=0x8028,
+            DRangeOptimizerBracketLow=0x8019,
+            DRangoOptimizerBracketHigh=0x8029,
+            ContinuousBracket1_0EV3Image=0x8311,
+            ContinuousBracket2_0EV3Image=0x8321,
+            ContinuousBracket3_0EV3Image=0x8331,
+            ContinuousBracket0_3EV3Image=0x8337,
+            ContinuousBracket0_5EV3Image=0x8357,
+            ContinuousBracket0_7EV3Image=0x8377,
+            ContinuousBracket0_3EV5Image=0x8537,
+            ContinuousBracket0_5EV5Image=0x8557,
+            ContinuousBracket0_7EV5Image=0x8577,
+            SingleBracket1_0EV3Image=0x8310,
+            SingleBracket2_0EV3Image=0x8320,
+            SingleBracket3_0EV3Image=0x8330,
+            SingleBracket0_3EV3Image=0x8336,
+            SingleBracket0_5EV3Image=0x8356,
+            SingleBracket0_7EV3Image=0x8376,
+            SingleBracket0_3EV5Image=0x8536,
+            SingleBracket0_5EV5Image=0x8556,
+            SingleBracket0_7EV5Image=0x8576,
+        )
     def _set_endian(self, endian):
         logger.debug('Set Sony endianness')
         super(Sony, self)._set_endian(endian)
         self._ExposureProgramMode = self._ExposureProgramMode()
+        self._PictureEffect = self._PictureEffect()
+        self._StillCaptureMode = self._StillCaptureMode()
         self._Visibility = self._Visibility()
         self._SonyPropDesc = self._SonyPropDesc()
         self._SonyDeviceInfo = self._SonyDeviceInfo()

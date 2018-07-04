@@ -343,8 +343,8 @@ class USBTransport(object):
                     # Return None on timeout or busy for events
                     if (
                             (e.errno is None and
-                             ('timeout' in e.strerror or
-                              'busy' in e.strerror)) or
+                             ('timeout' in e.strerror.decode() or
+                              'busy' in e.strerror.decode())) or
                             (e.errno == 110 or e.errno == 16 or e.errno == 5)
                     ):
                         if event:
@@ -413,8 +413,8 @@ class USBTransport(object):
                 # Ignore timeout or busy device once.
                 if (
                         (e.errno is None and
-                         ('timeout' in e.strerror or
-                          'busy' in e.strerror)) or
+                         ('timeout' in e.strerror.decode() or
+                          'busy' in e.strerror.decode())) or
                         (e.errno == 110 or e.errno == 16 or e.errno == 5)
                 ):
                     logger.warning('Ignored USBError {}'.format(e.errno))

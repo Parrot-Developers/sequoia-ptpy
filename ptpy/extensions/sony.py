@@ -147,6 +147,7 @@ class Sony(object):
     def _ExposureProgramMode(self):
         return Enum(
             self._UInt16,
+            default=Pass,
             IntelligentAuto=0x8000,
             SuperiorAuto=0x8001,
             P=0x2,
@@ -168,6 +169,12 @@ class Sony(object):
             HandheldTwilight=0x8016,
             NightPortrait=0x8017,
             AntiMotionBlur=0x8018,
+        )
+
+    def _AutoFocus(self):
+        return Enum(
+            self._UInt16,
+            default=Pass,
         )
 
     def _PictureEffect(self):
@@ -245,10 +252,19 @@ class Sony(object):
             SingleBracket0_5EV5Image=0x8556,
             SingleBracket0_7EV5Image=0x8576,
         )
+
+    def _ExposureBiasCompensation(self):
+        return ExprAdapter(
+            self._UInt16,
+            encode=lambda x: x*1000,
+            decode=lambda x: x/1000.,
+        )
+
     def _set_endian(self, endian):
         logger.debug('Set Sony endianness')
         super(Sony, self)._set_endian(endian)
         self._ExposureProgramMode = self._ExposureProgramMode()
+        self._AutoFocus = self._AutoFocus()
         self._PictureEffect = self._PictureEffect()
         self._StillCaptureMode = self._StillCaptureMode()
         self._Visibility = self._Visibility()

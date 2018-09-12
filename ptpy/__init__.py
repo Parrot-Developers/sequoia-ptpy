@@ -126,6 +126,8 @@ class PTPy(object):
             PTPy = ptpy_factory(transport)
         else:
             logger.debug('Imposing {} extension'.format(extension))
+            if extension is None:
+                logger.warning('Could not choose camera extension')
             PTPy = ptpy_factory(
                 transport,
                 extension

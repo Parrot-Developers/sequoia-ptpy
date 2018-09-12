@@ -3,11 +3,12 @@
 Use it in a master module that determines the vendor and automatically uses its
 extension. This is why inheritance is not explicit.
 '''
-from ..util import _main_thread_alive
+from ...util import _main_thread_alive
+from .properties import EOSPropertiesMixin
 from contextlib import contextmanager
 from construct import (
     Array, Byte, Container, Embedded, Enum, Pass, PrefixedArray, Range, Struct,
-    Switch,
+    Switch, Computed
 )
 from six.moves.queue import Queue
 from threading import Thread, Event
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 __all__ = ('Canon',)
 
 
-class Canon(object):
+class Canon(EOSPropertiesMixin, object):
     '''This class implements Canon's PTP operations.'''
     def __init__(self, *args, **kwargs):
         logger.debug('Init Canon')
@@ -260,13 +261,26 @@ class Canon(object):
             StoreRemoved=0xC193,
             BulbExposureTime=0xC194,
             RecordingTime=0xC195,
+            InnerDevelopParam=0xC196,
+            RequestObjectTransferDevelop=0xC197,
+            GPSLogOutputProgress=0xC198,
+            GPSLogOutputComplete=0xC199,
+            TouchTrans=0xC19A,
+            RequestObjectTransferExInfo=0xC19B,
+            PowerZoomInfoChanged=0xC19D,
+            RequestPushMode=0xC19F,
             RequestObjectTransferTS=0xC1A2,
             AfResult=0xC1A3,
             CTGInfoCheckComplete=0xC1A4,
             OLCInfoChanged=0xC1A5,
-            ObjectAddedUnknown=0xC1A7,
-            RequestObjectTransferNew=0xC1A9,
+            ObjectAddedEx64=0xC1A7,
+            ObjectInfoChangedEx64=0xC1A8,
+            RequestObjectTransfer64=0xC1A9,
+            RequestObjectTransferFTP64=0xC1AB,
+            ImportFailed=0xC1AF,
+            BlePairing=0xC1B0,
             RequestObjectTransferFTP=0xC1F1,
+            Unknown=0xFFFF,
         )
 
     def _EOSPropertyCode(self):
@@ -434,42 +448,6 @@ class Canon(object):
             CADarkBright=0xD1DF,
         )
 
-    def _EOSImageFormat(self):
-        return Struct(
-            'Entries' / PrefixedArray(
-                self._UInt32,
-                Struct
-                (
-                    'Bytes' / self._UInt32,
-                    PrefixedArray(lambda ctx: ctx.Bytes / 4, Byte),
-
-                    'Type' / Enum(
-                        self._UInt32,
-                        default=Pass,
-                        JPG=1,
-                        RAW=1,
-                    ),
-                    'Size' / Enum(
-                        self._UInt32,
-                        default=Pass,
-                        L=0x00,
-                        M=0x01,
-                        S=0x02,
-                        S1=0x0E,
-                        S2=0x0f,
-                        S3=0x10,
-                    ),
-                    'Compression' / Enum(
-                        self._UInt32,
-                        default=Pass,
-                        Standard=0x02,
-                        Fine=0x03,
-                        Lossless=0x04,
-                    ),
-                )
-            ),
-        )
-
     def _EOSEventRecords(self):
         '''Return desired endianness for EOS Event Records constructor'''
         return Range(
@@ -487,30 +465,79 @@ class Canon(object):
                 'Record' / Switch(
                     lambda ctx: ctx.EventCode,
                     {
-                        'DevicePropChanged':
-                        Embedded(Struct(
-                            'PropertyCode' / self._EOSPropertyCode,
-                            'Enumeration' / Array(
-                                lambda ctx: ctx._._.Bytes/4 - 3,
-                                # TODO: Automatically decode each property
-                                # code's enumeration values.
-                                self._UInt32
-                            ),
-                        )),
                         'AvailListChanged':
                         Embedded(Struct(
                             'PropertyCode' / self._EOSPropertyCode,
                             'Enumeration' / Array(
                                 # TODO: Verify if this is actually an
                                 # enumeration.
-                                lambda ctx: ctx._._.Bytes/4 - 3,
-                                self._UInt32
+                                lambda ctx: ctx._._.Bytes - 12,
+                                self._UInt8
                             )
                         )),
+                        'DevicePropChanged':
+                        Embedded(Struct(
+                            'PropertyCode' / self._EOSPropertyCode,
+                            'DataTypeCode' / Computed(
+                                lambda ctx: self._EOSDataTypeCode[ctx.PropertyCode]
+                            ),
+                            'Value' / Switch(
+                                lambda ctx: ctx.DataTypeCode,
+                                {
+                                    None: Array(
+                                        lambda ctx: ctx._._.Bytes - 12,
+                                        self._UInt8
+                                    )
+                                },
+                                default=self._DataType
+                            ),
+                        )),
+                        # TODO: 'EmptyEvent',
+                        # TODO: 'RequestGetEvent',
+                        # TODO: 'ObjectAdded',
+                        # TODO: 'ObjectRemoved',
+                        # TODO: 'RequestGetObjectInfoEx',
+                        # TODO: 'StorageStatusChanged',
+                        # TODO: 'StorageInfoChanged',
+                        # TODO: 'RequestObjectTransfer',
+                        # TODO: 'ObjectInfoChangedEx',
+                        # TODO: 'ObjectContentChanged',
+                        # TODO: 'DevicePropChanged',
+                        # TODO: 'AvailListChanged',
+                        # TODO: 'CameraStatusChanged',
+                        # TODO: 'WillSoonShutdown',
+                        # TODO: 'ShutdownTimerUpdated',
+                        # TODO: 'RequestCancelTransfer',
+                        # TODO: 'RequestObjectTransferDT',
+                        # TODO: 'RequestCancelTransferDT',
+                        # TODO: 'StoreAdded',
+                        # TODO: 'StoreRemoved',
+                        # TODO: 'BulbExposureTime',
+                        # TODO: 'RecordingTime',
+                        # TODO: 'InnerDevelopParam',
+                        # TODO: 'RequestObjectTransferDevelop',
+                        # TODO: 'GPSLogOutputProgress',
+                        # TODO: 'GPSLogOutputComplete',
+                        # TODO: 'TouchTrans',
+                        # TODO: 'RequestObjectTransferExInfo',
+                        # TODO: 'PowerZoomInfoChanged',
+                        # TODO: 'RequestPushMode',
+                        # TODO: 'RequestObjectTransferTS',
+                        # TODO: 'AfResult',
+                        # TODO: 'CTGInfoCheckComplete',
+                        # TODO: 'OLCInfoChanged',
+                        # TODO: 'ObjectAddedEx64',
+                        # TODO: 'ObjectInfoChangedEx64',
+                        # TODO: 'RequestObjectTransfer64',
+                        # TODO: 'RequestObjectTransferFTP64',
+                        # TODO: 'ImportFailed',
+                        # TODO: 'BlePairing',
+                        # TODO: 'RequestObjectTransferFTP',
+                        # TODO: 'Unknown',
                     },
                     default=Array(
-                        lambda ctx: ctx._.Bytes / 4 - 2,
-                        self._UInt32
+                        lambda ctx: ctx._.Bytes - 8,
+                        self._UInt8
                     )
                 )
             ))
@@ -535,11 +562,17 @@ class Canon(object):
     # TODO: Decode Canon specific events and properties.
     def _set_endian(self, endian):
         logger.debug('Set Canon endianness')
-        super(Canon, self)._set_endian(endian)
+        super(Canon, self)._set_endian(endian, explicit=True)
         self._EOSPropertyCode = self._EOSPropertyCode()
         self._EOSEventCode = self._EOSEventCode()
+        self._EOSImageSize = self._EOSImageSize()
+        self._EOSImageType = self._EOSImageType()
+        self._EOSImageCompression = self._EOSImageCompression()
+        self._EOSImageFormat = self._EOSImageFormat()
         self._EOSEventRecord = self._EOSEventRecord()
         self._EOSEventRecords = self._EOSEventRecords()
+        super(Canon, self)._set_endian(endian, explicit=False)
+
 
     # TODO: implement GetObjectSize
     # TODO: implement SetObjectArchive
@@ -925,6 +958,7 @@ class Canon(object):
                 if evts:
                     for evt in evts:
                         logger.debug('Event queued')
+                        logger.debug(evt)
                         self.__event_queue.put(evt)
             except Exception as e:
                 logger.error(e)

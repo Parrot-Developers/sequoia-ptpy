@@ -620,7 +620,7 @@ class PTP(object):
 
     # Helper to concretize generic constructors to desired endianness
     # ---------------------------------------------------------------
-    def _set_endian(self, endian):
+    def _set_endian(self, endian, explicit=None):
         '''Instantiate constructors to given endianness'''
         # All constructors need to be instantiated before use by setting their
         # endianness. But only those that don't depend on endian-generic
@@ -664,6 +664,12 @@ class PTP(object):
             raise PTPError(
                 'Only little and big endian conventions are supported.'
             )
+
+        if explicit is not None and explicit:
+            logger.debug('Initialized explicit constructors only')
+            return
+        elif explicit is not None and not explicit:
+            logger.debug('Initialize implicit constructors')
 
         # Implicit instantiation. Needs to happen after the above.
         self._PTPString = self._PTPString()

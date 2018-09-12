@@ -8,7 +8,7 @@ def read(filename):
 
 
 setup(
-    author_email='ld@airinov.fr',
+    author_email='luis.domenzain@parrot.com',
     author='Luis Mario Domenzain',
     classifiers=[
         'Development Status :: 3 - Alpha',

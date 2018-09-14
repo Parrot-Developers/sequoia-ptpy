@@ -562,7 +562,15 @@ class Canon(EOSPropertiesMixin, object):
     # TODO: Decode Canon specific events and properties.
     def _set_endian(self, endian):
         logger.debug('Set Canon endianness')
+        # HACK: The DataType mechanism used for automatic parsing introduces
+        # HACK: some nasty dependencies, so the PTP types need to be declared
+        # HACK: before the extension types, and then finally the DataType at
+        # HACK: the end...
+        # TODO: This could probably use a decorator to automatically work out the
+        # TODO: right order...
         super(Canon, self)._set_endian(endian, explicit=True)
+
+        # Prepare these for DataType
         self._EOSPropertyCode = self._EOSPropertyCode()
         self._EOSEventCode = self._EOSEventCode()
         self._EOSImageSize = self._EOSImageSize()
@@ -571,9 +579,13 @@ class Canon(EOSPropertiesMixin, object):
         self._EOSImageFormat = self._EOSImageFormat()
         self._EOSWhiteBalance = self._EOSWhiteBalance()
         self._EOSFocusMode = self._EOSFocusMode()
+
+        # Make sure DataType is available
+        super(Canon, self)._set_endian(endian, explicit=False)
+
+        # Use DataType
         self._EOSEventRecord = self._EOSEventRecord()
         self._EOSEventRecords = self._EOSEventRecords()
-        super(Canon, self)._set_endian(endian, explicit=False)
 
 
     # TODO: implement GetObjectSize

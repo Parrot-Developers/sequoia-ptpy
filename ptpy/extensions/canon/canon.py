@@ -280,7 +280,7 @@ class Canon(EOSPropertiesMixin, object):
             ImportFailed=0xC1AF,
             BlePairing=0xC1B0,
             RequestObjectTransferFTP=0xC1F1,
-            Unknown=0xFFFF,
+            UnknownError=0xFFFFFFFF,
         )
 
     def _EOSPropertyCode(self):
@@ -298,10 +298,10 @@ class Canon(EOSPropertiesMixin, object):
             AutoFocusMode=0xD108,
             WhiteBalance=0xD109,
             ColorTemperature=0xD10A,
-            WhiteBalanceAdjustA=0xD10B,
-            WhiteBalanceAdjustB=0xD10C,
-            WhiteBalanceXA=0xD10D,
-            WhiteBalanceXB=0xD10E,
+            WhiteBalanceAdjustBA=0xD10B,
+            WhiteBalanceAdjustMG=0xD10C,
+            WhiteBalanceBracketBA=0xD10D,
+            WhiteBalanceBracketMG=0xD10E,
             ColorSpace=0xD10F,
             PictureStyle=0xD110,
             BatteryPower=0xD111,

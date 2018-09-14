@@ -569,6 +569,8 @@ class Canon(EOSPropertiesMixin, object):
         self._EOSImageType = self._EOSImageType()
         self._EOSImageCompression = self._EOSImageCompression()
         self._EOSImageFormat = self._EOSImageFormat()
+        self._EOSWhiteBalance = self._EOSWhiteBalance()
+        self._EOSFocusMode = self._EOSFocusMode()
         self._EOSEventRecord = self._EOSEventRecord()
         self._EOSEventRecords = self._EOSEventRecords()
         super(Canon, self)._set_endian(endian, explicit=False)

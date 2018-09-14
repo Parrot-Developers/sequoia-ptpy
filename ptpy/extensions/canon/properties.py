@@ -58,6 +58,34 @@ class EOSPropertiesMixin(object):
             )
         )
 
+    def _EOSWhiteBalance(self):
+        return Enum(
+            self._UInt32,
+            default=Pass,
+            Auto=0,
+            Daylight=1,
+            Cloudy=2,
+            Tungsten=3,
+            Fluorescent=4,
+            Custom=6,
+            FluorescentH=7,
+            ColorTemperature=9,
+            CustomWhitebalancePC1=10,
+            CustomWhitebalancePC2=11,
+	        CustomWhitebalancePC3=12,
+	        MissingNumber=13,
+        )
+
+    def _EOSFocusMode(self):
+        return Enum(
+            self._UInt32,
+            default=Pass,
+            OneShot=0,
+            AIServo=1,
+            AIFocus=2,
+            Manual=3,
+        )
+
     def _DataType(self, **product_datatypes):
         '''Dictionary for EOS property constructors'''
         canon_datatypes = {
@@ -68,6 +96,9 @@ class EOSPropertiesMixin(object):
                 decoder=lambda obj, ctx: datetime.fromtimestamp(obj)
             ),
             'ImageFormat': self._EOSImageFormat,
+            'Compression': self._EOSImageCompression,
+            'WhiteBalance': self._EOSWhiteBalance,
+            'FocusMode': self._EOSFocusMode,
         }
         canon_datatypes.update(product_datatypes if product_datatypes else {})
         return super(EOSPropertiesMixin, self)._DataType(**canon_datatypes)
@@ -81,13 +112,13 @@ class EOSPropertiesMixin(object):
             'ShootingMode': None,
             'DriveMode': None,
             'ExposureMeteringMode': None,
-            'AutoFocusMode': None,
-            'WhiteBalance': None,
+            'AutoFocusMode': 'FocusMode',
+            'WhiteBalance': 'WhiteBalance',
             'ColorTemperature': None,
-            'WhiteBalanceAdjustA': None,
-            'WhiteBalanceAdjustB': None,
-            'WhiteBalanceXA': None,
-            'WhiteBalanceXB': None,
+            'WhiteBalanceAdjustBA': 'Int32',
+            'WhiteBalanceAdjustMG': 'Int32',
+            'WhiteBalanceBracketBA': 'UInt32',
+            'WhiteBalanceBracketMG': 'UInt32',
             'ColorSpace': None,
             'PictureStyle': None,
             'CameraTime': 'EpochTime',
@@ -103,14 +134,14 @@ class EOSPropertiesMixin(object):
             'BracketMode': None,
             'CurrentStorage': None,
             'CurrentFolder': None,
-            'ImageFormat': None,
-            'ImageFormatCF': None,
-            'ImageFormatSD': None,
-            'ImageFormatHDD': None,
-            'CompressionS': None,
-            'CompressionM1': None,
-            'CompressionM2': None,
-            'CompressionL': None,
+            'ImageFormat': 'ImageFormat',
+            'ImageFormatCF': 'ImageFormat',
+            'ImageFormatSD': 'ImageFormat',
+            'ImageFormatHDD': 'ImageFormat',
+            'CompressionS': 'Compression',
+            'CompressionM1': 'Compression',
+            'CompressionM2': 'Compression',
+            'CompressionL': 'Compression',
             'AEModeDial': None,
             'AEModeCustom': None,
             'MirrorUpSetting': None,

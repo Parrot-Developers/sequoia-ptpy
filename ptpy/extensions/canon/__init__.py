@@ -1,3 +1,3 @@
-from canon import Canon
+from .canon import Canon
 
 __all__ = ('Canon',)

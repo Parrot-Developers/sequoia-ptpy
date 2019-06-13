@@ -343,8 +343,10 @@ class PTP(object):
             PENTAX=0x0000000D,
             Fuji=0x0000000E,
             Sony=0x00000011,  # Self-imposed.
+            NDD=0x00000012,  # ndd Medical Technologies
             Samsung=0x0000001A,
             Parrot=0x0000001B,
+            Panasonic=0x0000001C,
         )
 
     def _DeviceInfo(self):
